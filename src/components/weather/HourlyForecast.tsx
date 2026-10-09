@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import type { CurrentWeather, ForecastItem } from "@/hooks/useWeather";
 import { getWeatherIcon } from "@/hooks/useWeather";
+import WeatherCard from "@/components/weather/WeatherCard";
 
 function formatTime(time: string): string {
     return time.slice(11, 16);
@@ -36,7 +37,12 @@ function WeatherIcon({ slug, label }: { slug: string; label: string }) {
     }, [slug]);
 
     if (!src) {
-        return <span className="size-10 shrink-0" aria-hidden="true" />;
+        return (
+            <span
+                className="size-10 shrink-0"
+                aria-hidden="true"
+            />
+        );
     }
 
     return (
@@ -50,29 +56,25 @@ function WeatherIcon({ slug, label }: { slug: string; label: string }) {
     );
 }
 
+type HourlyForecastProps = {
+    current: CurrentWeather | null;
+    forecast: ForecastItem[];
+    loading: boolean;
+    error: string | null;
+};
+
 export default function HourlyForecast({
     current,
     forecast,
     loading,
     error,
-}: {
-    current: CurrentWeather | null;
-    forecast: ForecastItem[];
-    loading: boolean;
-    error: string | null;
-}) {
-    return (
-        <section
-            aria-labelledby="hourly-forecast-title"
-            className="w-full overflow-hidden rounded-2xl border border-white/20 bg-black/10 p-4 text-white backdrop-blur-lg"
+}: HourlyForecastProps) {
+        return (
+        <WeatherCard
+            title="HOURLY FORECAST"
+            divided
+            bodyClassName=""
         >
-            <h2
-                id="hourly-forecast-title"
-                className="mb-4 text-sm font-medium tracking-wide text-white/60"
-            >
-                HOURLY FORECAST
-            </h2>
-
             {loading && (
                 <p className="py-4 text-sm text-white/70">
                     Loading forecast...
@@ -80,16 +82,21 @@ export default function HourlyForecast({
             )}
 
             {error && (
-                <p role="alert" className="py-4 text-sm text-white/80">
+                <p
+                    role="alert"
+                    className="py-4 text-sm text-white/80"
+                >
                     {error}
                 </p>
             )}
 
             {!loading && !error && (
-                <div className="scrollbar-hide flex gap-5 overflow-x-auto pb-2">
+                <div className="scrollbar-hide flex snap-x snap-mandatory gap-1 overflow-x-auto scroll-smooth pb-2">
                     {current && (
-                        <div className="flex min-w-12 shrink-0 flex-col items-center gap-3">
-                            <span className="text-sm text-white/80">Now</span>
+                        <div className="flex w-14 shrink-0 snap-start flex-col items-center gap-3">
+                            <span className="whitespace-nowrap text-sm text-white/80">
+                                Now
+                            </span>
 
                             <WeatherIcon
                                 slug={getWeatherIcon(
@@ -115,19 +122,22 @@ export default function HourlyForecast({
                         const label = isHour
                             ? "Hourly weather"
                             : item.kind === "sunrise"
-                              ? "Sunrise"
-                              : "Sunset";
+                                ? "Sunrise"
+                                : "Sunset";
 
                         return (
                             <div
                                 key={`${item.kind}-${item.time}`}
-                                className="flex min-w-12 shrink-0 flex-col items-center gap-3"
+                                className="flex w-14 shrink-0 snap-start flex-col items-center gap-3"
                             >
-                                <span className="text-sm text-white/80">
+                                <span className="whitespace-nowrap text-sm text-white/80">
                                     {formatTime(item.time)}
                                 </span>
 
-                                <WeatherIcon slug={slug} label={label} />
+                                <WeatherIcon
+                                    slug={slug}
+                                    label={label}
+                                />
 
                                 <span className="text-lg font-medium">
                                     {isHour
@@ -139,6 +149,6 @@ export default function HourlyForecast({
                     })}
                 </div>
             )}
-        </section>
+        </WeatherCard>
     );
 }
