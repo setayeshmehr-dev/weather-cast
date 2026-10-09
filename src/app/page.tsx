@@ -1,28 +1,81 @@
-
 "use client";
 
 import HourlyForecast from "@/components/weather/HourlyForecast";
 import WeatherCard from "@/components/weather/WeatherCard";
 import { useWeather } from "@/hooks/useWeather";
 
+/*
+ * Breakpoints (viewport):
+ *  - below 656px      : 2 columns, fluid cells (mobile)
+ *  - 656px and above  : 4 columns, fixed 144px cells
+ *  - 976px and above  : 6 columns, fixed 144px cells
+ * The array order is the mobile order. Larger layouts place cards explicitly.
+ */
 const weatherCards = [
-    { title: "WIND" },
-    { title: "UV INDEX" },
-    { title: "HUMIDITY" },
-    { title: "PRESSURE" },
-    { title: "VISIBILITY" },
-    { title: "PRECIPITATION" },
-    { title: "FEELS LIKE" },
-    { title: "AIR QUALITY" },
-    { title: "MOON PHASE" },
     {
-        title: "CLIMATE AVERAGES",
-        className: "sm:col-span-2 lg:col-span-1",
+        title: "10-DAY FORECAST",
+        className:
+            "col-span-2 row-span-3 min-[656px]:col-start-1 min-[656px]:row-start-1",
     },
     {
         title: "WEATHER MAP",
-        className: "sm:col-span-2 lg:col-span-2",
-        bodyClassName: "min-h-56 sm:min-h-64",
+        className:
+            "col-span-2 row-span-2 min-[656px]:col-start-3 min-[656px]:row-start-1 min-[976px]:col-start-5",
+    },
+    {
+        title: "AIR QUALITY",
+        className:
+            "col-span-2 min-[656px]:col-start-3 min-[656px]:row-start-3 min-[976px]:row-start-1",
+    },
+    {
+        title: "WIND",
+        className:
+            "col-span-2 min-[656px]:col-start-3 min-[656px]:row-start-4 min-[656px]:-my-[calc(var(--cell)_*_0.08)] min-[976px]:row-start-2",
+    },
+    {
+        title: "MOON PHASE",
+        className:
+            "col-span-2 min-[656px]:col-start-1 min-[656px]:row-start-4",
+    },
+    {
+        title: "UV INDEX",
+        className:
+            "min-[656px]:col-start-1 min-[656px]:row-start-5 min-[976px]:col-start-3 min-[976px]:row-start-3",
+    },
+    {
+        title: "SUNRISE",
+        className:
+            "min-[656px]:col-start-2 min-[656px]:row-start-5 min-[976px]:col-start-4 min-[976px]:row-start-3",
+    },
+    {
+        title: "FEELS LIKE",
+        className:
+            "min-[656px]:col-start-3 min-[656px]:row-start-5 min-[976px]:col-start-5 min-[976px]:row-start-3",
+    },
+    {
+        title: "PRECIPITATION",
+        className:
+            "min-[656px]:col-start-4 min-[656px]:row-start-5 min-[976px]:col-start-6 min-[976px]:row-start-3",
+    },
+    {
+        title: "VISIBILITY",
+        className:
+            "min-[656px]:col-start-1 min-[656px]:row-start-6 min-[976px]:col-start-4 min-[976px]:row-start-4",
+    },
+    {
+        title: "HUMIDITY",
+        className:
+            "min-[656px]:col-start-2 min-[656px]:row-start-6 min-[976px]:col-start-3 min-[976px]:row-start-4",
+    },
+    {
+        title: "PRESSURE",
+        className:
+            "min-[656px]:col-start-3 min-[656px]:row-start-6 min-[976px]:col-start-5 min-[976px]:row-start-4",
+    },
+    {
+        title: "CLIMATE AVERAGES",
+        className:
+            "min-[656px]:col-start-4 min-[656px]:row-start-6 min-[976px]:col-start-6 min-[976px]:row-start-4",
     },
 ];
 
@@ -30,10 +83,10 @@ export default function Home() {
     const { current, forecast, loading, error } = useWeather();
 
     return (
-        <main className="min-h-screen bg-linear-to-b from-sky-700 to-slate-900 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-            <div className="mx-auto w-full max-w-7xl">
+        <main className="min-h-screen bg-linear-to-b from-sky-700 to-slate-900 px-4 py-6">
+            <div className="@container mx-auto w-full min-[656px]:max-w-156 min-[976px]:max-w-236">
                 <section className="my-8 flex flex-col items-center justify-center text-center text-white sm:my-10">
-                    <h1 className="text-2xl font-medium capitalize sm:text-3xl">
+                    <h1 className="text-[34px] leading-tight capitalize">
                         Tehran
                     </h1>
 
@@ -51,15 +104,15 @@ export default function Home() {
 
                     {!loading && !error && current && (
                         <>
-                            <p className="mt-2 text-6xl font-light sm:text-7xl">
+                            <p className="mt-1 text-[96px] leading-none font-extralight">
                                 {Math.round(current.temperature)}°
                             </p>
 
-                            <p className="mt-2 text-base">
+                            <p className="mt-2 text-xl">
                                 {current.condition}
                             </p>
 
-                            <p className="mt-1 text-sm text-white/80">
+                            <p className="text-xl">
                                 H:{Math.round(current.max)}° L:{Math.round(current.min)}°
                             </p>
                         </>
@@ -75,14 +128,19 @@ export default function Home() {
 
                 <section
                     aria-label="Weather details"
-                    className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 "
+                    className="grid [--cols:2] [--gap:12px] [--cell:calc((100cqw-var(--gap))/2)] min-[656px]:[--cols:4] min-[656px]:[--gap:16px] min-[656px]:[--cell:144px] min-[976px]:[--cols:6]"
+                    style={{
+                        gridTemplateColumns: "repeat(var(--cols), var(--cell))",
+                        gridAutoRows: "var(--cell)",
+                        gap: "var(--gap)",
+                        marginTop: "var(--gap)",
+                    }}
                 >
                     {weatherCards.map((card) => (
                         <WeatherCard
                             key={card.title}
                             title={card.title}
                             className={card.className}
-                            bodyClassName={card.bodyClassName}
                         />
                     ))}
                 </section>

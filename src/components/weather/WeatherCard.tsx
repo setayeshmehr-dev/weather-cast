@@ -14,16 +14,16 @@ export default function WeatherCard({
     icon,
     divided = false,
     className = "",
-    bodyClassName = "min-h-24",
+    bodyClassName = "",
     children,
 }: WeatherCardProps) {
     return (
         <section
             aria-label={title}
-            className={`min-w-0 overflow-hidden rounded-[22px] border border-white/20 bg-black/10 p-4 text-white backdrop-blur-lg ${className}`}
+            className={`flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[18px] border border-white/20 bg-black/10 p-3 text-white backdrop-blur-lg min-[656px]:p-2.5 ${className}`}
         >
             <h2
-                className={`flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-white/60 ${
+                className={`flex shrink-0 items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-white/60 ${
                     divided ? "border-b border-white/15 pb-2" : ""
                 }`}
             >
@@ -31,7 +31,11 @@ export default function WeatherCard({
                 {title}
             </h2>
 
-            <div className={`${divided ? "pt-3" : "mt-3"} ${bodyClassName}`}>
+            <div
+                className={`min-h-0 flex-1 ${
+                    divided ? "pt-3" : "mt-3"
+                } ${bodyClassName}`}
+            >
                 {children}
             </div>
         </section>

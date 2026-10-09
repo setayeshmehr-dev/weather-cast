@@ -1,10 +1,9 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
+import WeatherCard from "@/components/weather/WeatherCard";
 import type { CurrentWeather, ForecastItem } from "@/hooks/useWeather";
 import { getWeatherIcon } from "@/hooks/useWeather";
-import WeatherCard from "@/components/weather/WeatherCard";
 
 function formatTime(time: string): string {
     return time.slice(11, 16);
@@ -69,12 +68,8 @@ export default function HourlyForecast({
     loading,
     error,
 }: HourlyForecastProps) {
-        return (
-        <WeatherCard
-            title="HOURLY FORECAST"
-            divided
-            bodyClassName=""
-        >
+    return (
+        <WeatherCard title="HOURLY FORECAST" divided>
             {loading && (
                 <p className="py-4 text-sm text-white/70">
                     Loading forecast...
