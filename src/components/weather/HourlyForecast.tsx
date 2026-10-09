@@ -41,9 +41,7 @@ function getWeatherIcon(code: number, isDay: boolean): string {
   if (code === -1) return "sunrise";
   if (code === -2) return "sunset";
 
-  if (code === 0) {
-    return isDay ? "clear-day" : "clear-night";
-  }
+  if (code === 0) return isDay ? "clear-day" : "clear-night";
 
   if (code === 1 || code === 2) {
     return isDay ? "partly-cloudy-day" : "partly-cloudy-night";
@@ -52,17 +50,13 @@ function getWeatherIcon(code: number, isDay: boolean): string {
   if (code === 3) return "overcast";
   if (code === 45 || code === 48) return "fog";
 
-  if ([51, 53, 55, 56, 57].includes(code)) {
-    return "drizzle";
-  }
+  if ([51, 53, 55, 56, 57].includes(code)) return "drizzle";
 
   if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) {
     return "rain";
   }
 
-  if ([71, 73, 75, 77].includes(code)) {
-    return "snow";
-  }
+  if ([71, 73, 75, 77].includes(code)) return "snow";
 
   if ([85, 86].includes(code)) {
     return isDay ? "snow-showers-day" : "snow-showers-night";
@@ -97,21 +91,15 @@ function WeatherIcon({
 
     import(`@meteocons/svg/fill/${slug}.svg`)
       .then((module) => {
-        if (active) {
-          setSrc(module.default);
-        }
+        if (active) setSrc(module.default);
       })
       .catch(() => {
         import("@meteocons/svg/fill/overcast.svg")
           .then((module) => {
-            if (active) {
-              setSrc(module.default);
-            }
+            if (active) setSrc(module.default);
           })
           .catch(() => {
-            if (active) {
-              setSrc(null);
-            }
+            if (active) setSrc(null);
           });
       });
 
@@ -167,10 +155,11 @@ export default function HourlyForecast() {
         }
 
         const data = (await response.json()) as OpenMeteoResponse;
+        const currentTime = data.current.time;
 
         const now: HourlyItem = {
           kind: "hour",
-          time: data.current.time,
+          time: currentTime,
           temperature: data.current.temperature_2m,
           weatherCode: data.current.weather_code,
           isDay: data.current.is_day === 1,
@@ -186,31 +175,36 @@ export default function HourlyForecast() {
           }))
           .filter(
             (hour) =>
-              hour.time > data.current.time &&
+              hour.time > currentTime &&
               Number.isFinite(hour.temperature) &&
               Number.isFinite(hour.weatherCode)
           )
           .slice(0, 24);
 
         const sunrise = data.daily.sunrise.find(
-          (time) => time > data.current.time
+          (time) => time > currentTime
         );
 
         const sunset = data.daily.sunset.find(
-          (time) => time > data.current.time
+          (time) => time > currentTime
         );
 
         if (hours.length !== 24 || !sunrise || !sunset) {
           throw new Error("Incomplete forecast data.");
         }
 
-        setCurrent(now);
-
-        setForecast([
-          ...hours,
+        const events: SunEvent[] = [
           { kind: "sunrise", time: sunrise },
           { kind: "sunset", time: sunset },
-        ]);
+        ];
+
+        const sortedForecast: ForecastItem[] = [
+          ...hours,
+          ...events,
+        ].sort((a, b) => a.time.localeCompare(b.time));
+
+        setCurrent(now);
+        setForecast(sortedForecast);
       } catch {
         if (!controller.signal.aborted) {
           setError("Unable to load the weather forecast.");
@@ -253,6 +247,7 @@ export default function HourlyForecast() {
 
       {!loading && !error && current && (
         <div className="flex gap-5 overflow-x-auto pb-2">
+          {/* Current weather */}
           <div className="flex min-w-12 shrink-0 flex-col items-center gap-3">
             <span className="text-sm text-white/80">Now</span>
 
@@ -266,6 +261,7 @@ export default function HourlyForecast() {
             </span>
           </div>
 
+          {/* Next 24 hours and sun events, sorted by time */}
           {forecast.map((item) => {
             const isHour = item.kind === "hour";
 
@@ -273,34 +269,29 @@ export default function HourlyForecast() {
               ? getWeatherIcon(item.weatherCode, item.isDay)
               : item.kind;
 
+            const label = isHour
+              ? "Hourly weather"
+              : item.kind === "sunrise"
+                ? "Sunrise"
+                : "Sunset";
+
             return (
               <div
                 key={`${item.kind}-${item.time}`}
                 className="flex min-w-12 shrink-0 flex-col items-center gap-3"
               >
+                {/* Time always above the icon */}
                 <span className="text-sm text-white/80">
-                  {isHour
-                    ? formatTime(item.time)
-                    : item.kind === "sunrise"
-                      ? "Sunrise"
-                      : "Sunset"}
+                  {formatTime(item.time)}
                 </span>
 
-                <WeatherIcon
-                  slug={slug}
-                  label={
-                    isHour
-                      ? "Hourly weather"
-                      : item.kind === "sunrise"
-                        ? "Sunrise"
-                        : "Sunset"
-                  }
-                />
+                <WeatherIcon slug={slug} label={label} />
 
+                {/* Temperature or sun-event title below the icon */}
                 <span className="text-lg font-medium">
                   {isHour
                     ? `${Math.round(item.temperature)}°`
-                    : formatTime(item.time)}
+                    : label}
                 </span>
               </div>
             );
