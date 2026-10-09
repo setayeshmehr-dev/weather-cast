@@ -12,6 +12,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-linear-to-b from-sky-700 to-slate-900 p-6">
+      
       <section className="my-10 flex flex-col items-center justify-center text-white">
         <h1 className="text-3xl capitalize">{weather.city}</h1>
         <p className="mt-2 text-6xl font-light">{weather.temperature}°</p>
@@ -20,6 +21,7 @@ export default function Home() {
       </section>
 
       <HourlyForecast />
+
     </main>
   );
 }
