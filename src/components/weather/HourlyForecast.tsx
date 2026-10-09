@@ -86,7 +86,7 @@ export default function HourlyForecast({
             )}
 
             {!loading && !error && (
-                <div className="flex gap-5 overflow-x-auto pb-2">
+                <div className="scrollbar-hide flex gap-5 overflow-x-auto pb-2">
                     {current && (
                         <div className="flex min-w-12 shrink-0 flex-col items-center gap-3">
                             <span className="text-sm text-white/80">Now</span>
