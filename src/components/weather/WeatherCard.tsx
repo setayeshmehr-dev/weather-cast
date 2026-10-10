@@ -4,6 +4,7 @@ type WeatherCardProps = {
     title: string;
     icon?: ReactNode;
     divided?: boolean;
+    flush?: boolean;
     className?: string;
     bodyClassName?: string;
     children?: ReactNode;
@@ -13,10 +14,13 @@ export default function WeatherCard({
     title,
     icon,
     divided = false,
+    flush = false,
     className = "",
     bodyClassName = "",
     children,
 }: WeatherCardProps) {
+    const bodySpacing = flush ? "" : divided ? "pt-3" : "mt-3";
+
     return (
         <section
             aria-label={title}
@@ -31,11 +35,7 @@ export default function WeatherCard({
                 {title}
             </h2>
 
-            <div
-                className={`min-h-0 flex-1 ${
-                    divided ? "pt-3" : "mt-3"
-                } ${bodyClassName}`}
-            >
+            <div className={`min-h-0 flex-1 ${bodySpacing} ${bodyClassName}`}>
                 {children}
             </div>
         </section>

@@ -1,6 +1,7 @@
 "use client";
 
 import HourlyForecast from "@/components/weather/HourlyForecast";
+import TenDayForecast from "@/components/weather/TenDayForecast";
 import WeatherCard from "@/components/weather/WeatherCard";
 import { useWeather } from "@/hooks/useWeather";
 
@@ -9,14 +10,13 @@ import { useWeather } from "@/hooks/useWeather";
  *  - below 656px      : 2 columns, fluid cells (mobile)
  *  - 656px and above  : 4 columns, fixed 144px cells
  *  - 976px and above  : 6 columns, fixed 144px cells
- * The array order is the mobile order. Larger layouts place cards explicitly.
+ * The order here (with the 10-day card first) is the mobile order.
+ * Larger layouts place cards explicitly.
  */
+const tenDayClassName =
+    "col-span-2 row-span-3 min-[656px]:col-start-1 min-[656px]:row-start-1";
+
 const weatherCards = [
-    {
-        title: "10-DAY FORECAST",
-        className:
-            "col-span-2 row-span-3 min-[656px]:col-start-1 min-[656px]:row-start-1",
-    },
     {
         title: "WEATHER MAP",
         className:
@@ -30,7 +30,7 @@ const weatherCards = [
     {
         title: "WIND",
         className:
-            "col-span-2 min-[656px]:col-start-3 min-[656px]:row-start-4 min-[656px]:-my-[calc(var(--cell)_*_0.08)] min-[976px]:row-start-2",
+            "col-span-2 min-[656px]:col-start-3 min-[656px]:row-start-4 min-[976px]:row-start-2",
     },
     {
         title: "MOON PHASE",
@@ -80,7 +80,7 @@ const weatherCards = [
 ];
 
 export default function Home() {
-    const { current, forecast, loading, error } = useWeather();
+    const { current, forecast, daily, loading, error } = useWeather();
 
     return (
         <main className="min-h-screen bg-linear-to-b from-sky-700 to-slate-900 px-4 py-6">
@@ -136,6 +136,14 @@ export default function Home() {
                         marginTop: "var(--gap)",
                     }}
                 >
+                    <TenDayForecast
+                        current={current}
+                        daily={daily}
+                        loading={loading}
+                        error={error}
+                        className={tenDayClassName}
+                    />
+
                     {weatherCards.map((card) => (
                         <WeatherCard
                             key={card.title}

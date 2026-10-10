@@ -17,6 +17,14 @@ export type SunEvent = {
 
 export type ForecastItem = HourlyItem | SunEvent;
 
+export type DailyItem = {
+    date: string;
+    min: number;
+    max: number;
+    weatherCode: number;
+    precipitationChance: number;
+};
+
 export type CurrentWeather = {
     temperature: number;
     weatherCode: number;
@@ -40,10 +48,13 @@ type OpenMeteoResponse = {
         is_day: number[];
     };
     daily: {
+        time: string[];
         sunrise: string[];
         sunset: string[];
         temperature_2m_max: number[];
         temperature_2m_min: number[];
+        weather_code: number[];
+        precipitation_probability_max: (number | null)[];
     };
 };
 
@@ -78,6 +89,7 @@ export function getWeatherIcon(code: number, isDay: boolean): string {
 export function useWeather() {
     const [current, setCurrent] = useState<CurrentWeather | null>(null);
     const [forecast, setForecast] = useState<ForecastItem[]>([]);
+    const [daily, setDaily] = useState<DailyItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -94,8 +106,8 @@ export function useWeather() {
                     "?latitude=35.69&longitude=51.42" +
                     "&current=temperature_2m,weather_code,is_day" +
                     "&hourly=temperature_2m,weather_code,is_day" +
-                    "&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min" +
-                    "&forecast_days=2&timezone=Asia%2FTehran";
+                    "&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max" +
+                    "&forecast_days=10&timezone=Asia%2FTehran";
 
                 const response = await fetch(api, { signal: controller.signal });
                 if (!response.ok) throw new Error("Failed to fetch weather.");
@@ -143,8 +155,19 @@ export function useWeather() {
                     { kind: "sunset", time: sunset },
                 ];
 
+                const days: DailyItem[] = data.daily.time
+                    .map((date, index) => ({
+                        date,
+                        min: data.daily.temperature_2m_min[index],
+                        max: data.daily.temperature_2m_max[index],
+                        weatherCode: data.daily.weather_code[index],
+                        precipitationChance: data.daily.precipitation_probability_max[index] ?? 0,
+                    }))
+                    .slice(dayIndex);
+
                 setCurrent(weather);
                 setForecast([...hours, ...events].sort((a, b) => a.time.localeCompare(b.time)));
+                setDaily(days);
             } catch {
                 if (!controller.signal.aborted) {
                     setError("Unable to load weather data.");
@@ -158,5 +181,5 @@ export function useWeather() {
         return () => controller.abort();
     }, []);
 
-    return { current, forecast, loading, error };
+    return { current, forecast, daily, loading, error };
 }
