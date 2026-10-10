@@ -1,8 +1,11 @@
 "use client";
 
+import AirQualityCard from "@/components/weather/AirQualityCard";
 import HourlyForecast from "@/components/weather/HourlyForecast";
 import TenDayForecast from "@/components/weather/TenDayForecast";
 import WeatherCard from "@/components/weather/WeatherCard";
+import WindCard from "@/components/weather/WindCard";
+import { useAirQuality } from "@/hooks/useAirQuality";
 import { useWeather } from "@/hooks/useWeather";
 
 /*
@@ -10,28 +13,24 @@ import { useWeather } from "@/hooks/useWeather";
  *  - below 656px      : 2 columns, fluid cells (mobile)
  *  - 656px and above  : 4 columns, fixed 144px cells
  *  - 976px and above  : 6 columns, fixed 144px cells
- * The order here (with the 10-day card first) is the mobile order.
- * Larger layouts place cards explicitly.
+ * The render order below is the mobile order: 10-day, map, air quality,
+ * wind, moon, then the small cards. Larger layouts place cards explicitly.
+ * The wind card is ~16% taller than one cell (negative vertical margin),
+ * like in Apple Weather, because the compass needs the room.
  */
 const tenDayClassName =
     "col-span-2 row-span-3 min-[656px]:col-start-1 min-[656px]:row-start-1";
 
-const weatherCards = [
-    {
-        title: "WEATHER MAP",
-        className:
-            "col-span-2 row-span-2 min-[656px]:col-start-3 min-[656px]:row-start-1 min-[976px]:col-start-5",
-    },
-    {
-        title: "AIR QUALITY",
-        className:
-            "col-span-2 min-[656px]:col-start-3 min-[656px]:row-start-3 min-[976px]:row-start-1",
-    },
-    {
-        title: "WIND",
-        className:
-            "col-span-2 min-[656px]:col-start-3 min-[656px]:row-start-4 min-[976px]:row-start-2",
-    },
+const mapClassName =
+    "col-span-2 row-span-2 min-[656px]:col-start-3 min-[656px]:row-start-1 min-[976px]:col-start-5";
+
+const airQualityClassName =
+    "col-span-2 min-[656px]:col-start-3 min-[656px]:row-start-3 min-[976px]:row-start-1";
+
+const windClassName =
+    "col-span-2 min-[656px]:col-start-3 min-[656px]:row-start-4 min-[656px]:-my-[calc(var(--cell)_*_0.08)] min-[976px]:row-start-2";
+
+const remainingCards = [
     {
         title: "MOON PHASE",
         className:
@@ -81,10 +80,15 @@ const weatherCards = [
 
 export default function Home() {
     const { current, forecast, daily, loading, error } = useWeather();
+    const {
+        airQuality,
+        loading: airQualityLoading,
+        error: airQualityError,
+    } = useAirQuality();
 
     return (
         <main className="min-h-screen bg-linear-to-b from-sky-700 to-slate-900 px-4 py-6">
-            <div className="@container mx-auto w-full min-[656px]:max-w-156 min-[976px]:max-w-236">
+            <div className="@container mx-auto w-full min-[656px]:max-w-[624px] min-[976px]:max-w-[944px]">
                 <section className="my-8 flex flex-col items-center justify-center text-center text-white sm:my-10">
                     <h1 className="text-[34px] leading-tight capitalize">
                         Tehran
@@ -128,7 +132,7 @@ export default function Home() {
 
                 <section
                     aria-label="Weather details"
-                    className="grid [--cols:2] [--gap:12px] [--cell:calc((100cqw-var(--gap))/2)] min-[656px]:[--cols:4] min-[656px]:[--gap:16px] min-[656px]:[--cell:144px] min-[976px]:[--cols:6]"
+                    className="grid [--cols:2] [--gap:12px] [--cell:calc((100cqw_-_var(--gap))_/_2)] min-[656px]:[--cols:4] min-[656px]:[--gap:16px] min-[656px]:[--cell:144px] min-[976px]:[--cols:6]"
                     style={{
                         gridTemplateColumns: "repeat(var(--cols), var(--cell))",
                         gridAutoRows: "var(--cell)",
@@ -144,7 +148,26 @@ export default function Home() {
                         className={tenDayClassName}
                     />
 
-                    {weatherCards.map((card) => (
+                    <WeatherCard
+                        title="WEATHER MAP"
+                        className={mapClassName}
+                    />
+
+                    <AirQualityCard
+                        airQuality={airQuality}
+                        loading={airQualityLoading}
+                        error={airQualityError}
+                        className={airQualityClassName}
+                    />
+
+                    <WindCard
+                        current={current}
+                        loading={loading}
+                        error={error}
+                        className={windClassName}
+                    />
+
+                    {remainingCards.map((card) => (
                         <WeatherCard
                             key={card.title}
                             title={card.title}
@@ -152,6 +175,21 @@ export default function Home() {
                         />
                     ))}
                 </section>
+
+                <footer className="mt-6 text-center text-xs text-white/60">
+                    <p>
+                        Weather data by{" "}
+                        <a
+                            href="https://open-meteo.com/"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="underline"
+                        >
+                            Open-Meteo.com
+                        </a>
+                    </p>
+                    <p>Air quality data: CAMS ENSEMBLE via Open-Meteo</p>
+                </footer>
             </div>
         </main>
     );
