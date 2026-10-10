@@ -1,58 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import WeatherCard from "@/components/weather/WeatherCard";
+import WeatherIcon from "@/components/weather/WeatherIcon";
 import type { CurrentWeather, ForecastItem } from "@/hooks/useWeather";
 import { getWeatherIcon } from "@/hooks/useWeather";
 
 function formatTime(time: string): string {
     return time.slice(11, 16);
-}
-
-function WeatherIcon({ slug, label }: { slug: string; label: string }) {
-    const [src, setSrc] = useState<string | null>(null);
-
-    useEffect(() => {
-        let active = true;
-        setSrc(null);
-
-        import(`@meteocons/svg/fill/${slug}.svg`)
-            .then((module) => {
-                if (active) setSrc(module.default);
-            })
-            .catch(() => {
-                import("@meteocons/svg/fill/overcast.svg")
-                    .then((module) => {
-                        if (active) setSrc(module.default);
-                    })
-                    .catch(() => {
-                        if (active) setSrc(null);
-                    });
-            });
-
-        return () => {
-            active = false;
-        };
-    }, [slug]);
-
-    if (!src) {
-        return (
-            <span
-                className="size-10 shrink-0"
-                aria-hidden="true"
-            />
-        );
-    }
-
-    return (
-        <img
-            src={src}
-            alt={label}
-            width={40}
-            height={40}
-            className="size-10 shrink-0"
-        />
-    );
 }
 
 type HourlyForecastProps = {
@@ -69,7 +23,10 @@ export default function HourlyForecast({
     error,
 }: HourlyForecastProps) {
     return (
-        <WeatherCard title="HOURLY FORECAST" divided>
+        <WeatherCard
+            title="HOURLY FORECAST"
+            divided
+        >
             {loading && (
                 <p className="py-4 text-sm text-white/70">
                     Loading forecast...
