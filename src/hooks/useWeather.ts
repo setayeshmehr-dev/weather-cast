@@ -32,6 +32,9 @@ export type CurrentWeather = {
     condition: string;
     max: number;
     min: number;
+    windSpeed: number;
+    windGusts: number;
+    windDirection: number;
 };
 
 type OpenMeteoResponse = {
@@ -40,6 +43,9 @@ type OpenMeteoResponse = {
         temperature_2m: number;
         weather_code: number;
         is_day: number;
+        wind_speed_10m: number;
+        wind_gusts_10m: number;
+        wind_direction_10m: number;
     };
     hourly: {
         time: string[];
@@ -104,7 +110,7 @@ export function useWeather() {
                 const api =
                     "https://api.open-meteo.com/v1/forecast" +
                     "?latitude=35.69&longitude=51.42" +
-                    "&current=temperature_2m,weather_code,is_day" +
+                    "&current=temperature_2m,weather_code,is_day,wind_speed_10m,wind_gusts_10m,wind_direction_10m" +
                     "&hourly=temperature_2m,weather_code,is_day" +
                     "&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max" +
                     "&forecast_days=10&timezone=Asia%2FTehran";
@@ -126,6 +132,9 @@ export function useWeather() {
                     condition: getWeatherCondition(data.current.weather_code),
                     max: data.daily.temperature_2m_max[dayIndex],
                     min: data.daily.temperature_2m_min[dayIndex],
+                    windSpeed: data.current.wind_speed_10m,
+                    windGusts: data.current.wind_gusts_10m,
+                    windDirection: data.current.wind_direction_10m,
                 };
 
                 const hours: HourlyItem[] = data.hourly.time
