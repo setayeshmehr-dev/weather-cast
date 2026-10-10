@@ -1,23 +1,16 @@
+
 "use client";
 
 import AirQualityCard from "@/components/weather/AirQualityCard";
 import HourlyForecast from "@/components/weather/HourlyForecast";
+import HumidityCard from "@/components/weather/HumidityCard";
 import TenDayForecast from "@/components/weather/TenDayForecast";
+import VisibilityCard from "@/components/weather/VisibilityCard";
 import WeatherCard from "@/components/weather/WeatherCard";
 import WindCard from "@/components/weather/WindCard";
 import { useAirQuality } from "@/hooks/useAirQuality";
 import { useWeather } from "@/hooks/useWeather";
 
-/*
- * Breakpoints (viewport):
- *  - below 656px      : 2 columns, fluid cells (mobile)
- *  - 656px and above  : 4 columns, fixed 144px cells
- *  - 976px and above  : 6 columns, fixed 144px cells
- * The render order below is the mobile order: 10-day, map, air quality,
- * wind, moon, then the small cards. Larger layouts place cards explicitly.
- * The wind card is ~16% taller than one cell (negative vertical margin),
- * like in Apple Weather, because the compass needs the room.
- */
 const tenDayClassName =
     "col-span-2 row-span-3 min-[656px]:col-start-1 min-[656px]:row-start-1";
 
@@ -29,6 +22,12 @@ const airQualityClassName =
 
 const windClassName =
     "col-span-2 min-[656px]:col-start-3 min-[656px]:row-start-4 min-[656px]:-my-[calc(var(--cell)_*_0.08)] min-[976px]:row-start-2";
+
+const visibilityClassName =
+    "min-[656px]:col-start-1 min-[656px]:row-start-6 min-[976px]:col-start-4 min-[976px]:row-start-4";
+
+const humidityClassName =
+    "min-[656px]:col-start-2 min-[656px]:row-start-6 min-[976px]:col-start-3 min-[976px]:row-start-4";
 
 const remainingCards = [
     {
@@ -55,16 +54,6 @@ const remainingCards = [
         title: "PRECIPITATION",
         className:
             "min-[656px]:col-start-4 min-[656px]:row-start-5 min-[976px]:col-start-6 min-[976px]:row-start-3",
-    },
-    {
-        title: "VISIBILITY",
-        className:
-            "min-[656px]:col-start-1 min-[656px]:row-start-6 min-[976px]:col-start-4 min-[976px]:row-start-4",
-    },
-    {
-        title: "HUMIDITY",
-        className:
-            "min-[656px]:col-start-2 min-[656px]:row-start-6 min-[976px]:col-start-3 min-[976px]:row-start-4",
     },
     {
         title: "PRESSURE",
@@ -165,6 +154,20 @@ export default function Home() {
                         loading={loading}
                         error={error}
                         className={windClassName}
+                    />
+
+                    <VisibilityCard
+                        current={current}
+                        loading={loading}
+                        error={error}
+                        className={visibilityClassName}
+                    />
+
+                    <HumidityCard
+                        current={current}
+                        loading={loading}
+                        error={error}
+                        className={humidityClassName}
                     />
 
                     {remainingCards.map((card) => (
