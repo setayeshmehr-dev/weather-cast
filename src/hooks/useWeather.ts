@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -35,6 +36,9 @@ export type CurrentWeather = {
     windSpeed: number;
     windGusts: number;
     windDirection: number;
+    relativeHumidity: number | null;
+    dewPoint: number | null;
+    visibility: number | null;
 };
 
 type OpenMeteoResponse = {
@@ -52,6 +56,9 @@ type OpenMeteoResponse = {
         temperature_2m: number[];
         weather_code: number[];
         is_day: number[];
+        relative_humidity_2m: (number | null)[];
+        dew_point_2m: (number | null)[];
+        visibility: (number | null)[];
     };
     daily: {
         time: string[];
@@ -92,6 +99,24 @@ export function getWeatherIcon(code: number, isDay: boolean): string {
     return "overcast";
 }
 
+function getCurrentHourIndex(times: string[], currentTime: string): number {
+    let closestIndex = -1;
+    let smallestDifference = Infinity;
+
+    times.forEach((time, index) => {
+        const difference = Math.abs(
+            new Date(time).getTime() - new Date(currentTime).getTime()
+        );
+
+        if (Number.isFinite(difference) && difference < smallestDifference) {
+            smallestDifference = difference;
+            closestIndex = index;
+        }
+    });
+
+    return closestIndex;
+}
+
 export function useWeather() {
     const [current, setCurrent] = useState<CurrentWeather | null>(null);
     const [forecast, setForecast] = useState<ForecastItem[]>([]);
@@ -111,7 +136,7 @@ export function useWeather() {
                     "https://api.open-meteo.com/v1/forecast" +
                     "?latitude=35.69&longitude=51.42" +
                     "&current=temperature_2m,weather_code,is_day,wind_speed_10m,wind_gusts_10m,wind_direction_10m" +
-                    "&hourly=temperature_2m,weather_code,is_day" +
+                    "&hourly=temperature_2m,weather_code,is_day,relative_humidity_2m,dew_point_2m,visibility" +
                     "&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max" +
                     "&forecast_days=10&timezone=Asia%2FTehran";
 
@@ -121,9 +146,22 @@ export function useWeather() {
                 const data = (await response.json()) as OpenMeteoResponse;
                 const currentTime = data.current.time;
                 const currentDate = currentTime.slice(0, 10);
-                const dayIndex = data.daily.sunrise.findIndex((time) => time.slice(0, 10) === currentDate);
+                const dayIndex = data.daily.sunrise.findIndex(
+                    (time) => time.slice(0, 10) === currentDate
+                );
 
-                if (dayIndex < 0) throw new Error("Daily weather data is unavailable.");
+                if (dayIndex < 0) {
+                    throw new Error("Daily weather data is unavailable.");
+                }
+
+                const currentHourIndex = getCurrentHourIndex(
+                    data.hourly.time,
+                    currentTime
+                );
+
+                if (currentHourIndex < 0) {
+                    throw new Error("Current hourly weather data is unavailable.");
+                }
 
                 const weather: CurrentWeather = {
                     temperature: data.current.temperature_2m,
@@ -135,7 +173,15 @@ export function useWeather() {
                     windSpeed: data.current.wind_speed_10m,
                     windGusts: data.current.wind_gusts_10m,
                     windDirection: data.current.wind_direction_10m,
+                    relativeHumidity: data.hourly.relative_humidity_2m[currentHourIndex],
+                    dewPoint: data.hourly.dew_point_2m[currentHourIndex],
+                    visibility: data.hourly.visibility[currentHourIndex],
                 };
+
+                console.log("Hourly index:", currentHourIndex);
+                console.log("Humidity:", weather.relativeHumidity);
+                console.log("Dew point:", weather.dewPoint);
+                console.log("Visibility:", weather.visibility);
 
                 const hours: HourlyItem[] = data.hourly.time
                     .map((time, index) => ({
@@ -174,6 +220,11 @@ export function useWeather() {
                     }))
                     .slice(dayIndex);
 
+                console.log("Hourly index:", currentHourIndex);
+                console.log("Humidity:", weather.relativeHumidity);
+                console.log("Dew point:", weather.dewPoint);
+                console.log("Visibility:", weather.visibility);
+                
                 setCurrent(weather);
                 setForecast([...hours, ...events].sort((a, b) => a.time.localeCompare(b.time)));
                 setDaily(days);
