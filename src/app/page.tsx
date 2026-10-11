@@ -142,7 +142,7 @@ export default function Home() {
                         className={tenDayClassName}
                     />
 
-                    <MapCard className={mapClassName} />
+                    <MapCard current={current} className={mapClassName} />
 
                     <AirQualityCard
                         airQuality={airQuality}

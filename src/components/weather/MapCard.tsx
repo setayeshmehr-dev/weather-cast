@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Map, Marker, config } from "@maptiler/sdk";
 import "@maptiler/sdk/dist/maptiler-sdk.css";
 import {
@@ -17,15 +18,21 @@ import {
     Thermometer,
     Wind,
 } from "@phosphor-icons/react";
+import PrecipitationMarker from "@/components/weather/PrecipitationMarker";
+import TemperatureMarker from "@/components/weather/TemperatureMarker";
 import WeatherCard from "@/components/weather/WeatherCard";
+import WindMarker from "@/components/weather/WindMarker";
+import type { CurrentWeather } from "@/hooks/useWeather";
 import styles from "./MapCard.module.css";
 
 type MapCardProps = {
+    current: CurrentWeather | null;
     className?: string;
 };
 
 type WeatherLayerType = "wind" | "temperature" | "precipitation";
 
+const CITY_NAME = "Tehran";
 const TEHRAN_CENTER: [number, number] = [51.42, 35.69];
 
 const WEATHER_LAYERS = [
@@ -46,13 +53,54 @@ const WEATHER_LAYERS = [
     },
 ] as const;
 
-export default function MapCard({ className }: MapCardProps) {
+type LayerMarkerProps = {
+    layer: WeatherLayerType;
+    current: CurrentWeather;
+};
+
+// Each weather layer has its own marker.
+function LayerMarker({ layer, current }: LayerMarkerProps) {
+    if (layer === "wind") {
+        return (
+            <WindMarker
+                city={CITY_NAME}
+                speed={current.windSpeed}
+                direction={current.windDirection}
+            />
+        );
+    }
+
+    if (layer === "precipitation") {
+        return (
+            <PrecipitationMarker
+                city={CITY_NAME}
+                temperature={current.temperature}
+                weatherCode={current.weatherCode}
+                isDay={current.isDay}
+            />
+        );
+    }
+
+    return (
+        <TemperatureMarker
+            city={CITY_NAME}
+            temperature={current.temperature}
+            low={current.min}
+            high={current.max}
+        />
+    );
+}
+
+export default function MapCard({ current, className }: MapCardProps) {
     const mapContainerRef = useRef<HTMLDivElement | null>(null);
     const mapRef = useRef<Map | null>(null);
     const activeLayerRef = useRef<string | null>(null);
     const [activeLayer, setActiveLayer] =
         useState<WeatherLayerType>("temperature");
     const [menuOpen, setMenuOpen] = useState(false);
+    const [markerElement, setMarkerElement] = useState<HTMLDivElement | null>(
+        null,
+    );
 
     useEffect(() => {
         const container = mapContainerRef.current;
@@ -82,19 +130,19 @@ export default function MapCard({ className }: MapCardProps) {
         mapRef.current = map;
 
         map.on("load", () => {
-            const markerElement = document.createElement("div");
-            markerElement.className = "weather-map-marker";
-            markerElement.innerHTML = `
-                <span class="weather-map-marker__glow"></span>
-                <span class="weather-map-marker__core"></span>
-            `;
+            // Empty anchor element: React renders the active layer's marker
+            // inside it (see the portal below).
+            const element = document.createElement("div");
+            element.className = "size-0";
 
             new Marker({
-                element: markerElement,
+                element,
                 anchor: "center",
             })
                 .setLngLat(TEHRAN_CENTER)
                 .addTo(map);
+
+            setMarkerElement(element);
         });
 
         map.on("error", (event) => {
@@ -262,6 +310,13 @@ export default function MapCard({ className }: MapCardProps) {
                 className={`min-h-0 w-full flex-1 overflow-hidden rounded-xl ${styles.map}`}
                 aria-label={`Weather map showing ${selectedLayer.label}`}
             />
+
+            {markerElement &&
+                current &&
+                createPortal(
+                    <LayerMarker layer={activeLayer} current={current} />,
+                    markerElement,
+                )}
         </WeatherCard>
     );
 }

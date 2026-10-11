@@ -1,4 +1,3 @@
-
 @layer theme, base, mui, components, utilities;
 @import "tailwindcss";
 
@@ -27,45 +26,6 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
-}
-
-.weather-map-marker {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: none;
-}
-
-.weather-map-marker__glow {
-    position: absolute;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: rgba(255, 69, 58, 0.25);
-    animation: weather-map-pulse 2s ease-out infinite;
-}
-
-.weather-map-marker__core {
-    position: relative;
-    width: 10px;
-    height: 10px;
-    border: 2px solid #ffffff;
-    border-radius: 50%;
-    background: #ff453a;
-    box-shadow: 0 0 12px rgba(255, 69, 58, 0.8);
-}
-
-@keyframes weather-map-pulse {
-    0% {
-        transform: scale(0.7);
-        opacity: 0.9;
-    }
-
-    100% {
-        transform: scale(2.2);
-        opacity: 0;
-    }
 }
 
 .maplibregl-map {
@@ -99,7 +59,6 @@ body {
 .maplibregl-ctrl-attrib {
     background: rgb(15 15 18 / 80%);
     color: #d1d1d6;
-    
 }
 
 .maplibregl-ctrl-attrib a {
