@@ -4,8 +4,8 @@ const CENTER = 28;
 const RING_RADIUS = 23;
 
 // The colored arc runs clockwise from 235° to 55° (angles measured from the top).
-const ARC_START = 235;
-const ARC_SWEEP = 250;
+const ARC_START = 237;
+const ARC_SWEEP = 242;
 const SEGMENTS = 36;
 
 function polar(angle: number, radius: number) {
@@ -110,7 +110,7 @@ export default function TemperatureMarker({
 
                     <text
                         x={18}
-                        y={48.5}
+                        y={45.5}
                         fontSize={11}
                         fontWeight={600}
                         fill={temperatureColor(low)}
@@ -120,7 +120,7 @@ export default function TemperatureMarker({
 
                     <text
                         x={38}
-                        y={48.5}
+                        y={45.5}
                         fontSize={11}
                         fontWeight={600}
                         fill={temperatureColor(high)}
