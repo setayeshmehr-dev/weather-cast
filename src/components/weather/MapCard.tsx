@@ -1,26 +1,58 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Map, Marker, config } from "@maptiler/sdk";
 import "@maptiler/sdk/dist/maptiler-sdk.css";
 import {
     ColorRamp,
     PrecipitationLayer,
-    PressureLayer,
-    RadarLayer,
     TemperatureLayer,
     WindLayer,
-} from "@maptiler/weather";import WeatherCard from "@/components/weather/WeatherCard";
+} from "@maptiler/weather";
+import {
+    CaretDown,
+    Check,
+    CloudRain,
+    Stack,
+    Thermometer,
+    Wind,
+} from "@phosphor-icons/react";
+import WeatherCard from "@/components/weather/WeatherCard";
 import styles from "./MapCard.module.css";
 
 type MapCardProps = {
     className?: string;
 };
 
+type WeatherLayerType = "wind" | "temperature" | "precipitation";
+
 const TEHRAN_CENTER: [number, number] = [51.42, 35.69];
+
+const WEATHER_LAYERS = [
+    {
+        id: "wind",
+        label: "Wind",
+        icon: Wind,
+    },
+    {
+        id: "temperature",
+        label: "Temperature",
+        icon: Thermometer,
+    },
+    {
+        id: "precipitation",
+        label: "Precipitation",
+        icon: CloudRain,
+    },
+] as const;
 
 export default function MapCard({ className }: MapCardProps) {
     const mapContainerRef = useRef<HTMLDivElement | null>(null);
+    const mapRef = useRef<Map | null>(null);
+    const activeLayerRef = useRef<string | null>(null);
+    const [activeLayer, setActiveLayer] =
+        useState<WeatherLayerType>("temperature");
+    const [menuOpen, setMenuOpen] = useState(false);
 
     useEffect(() => {
         const container = mapContainerRef.current;
@@ -42,10 +74,12 @@ export default function MapCard({ className }: MapCardProps) {
             dragRotate: false,
             pitchWithRotate: false,
             doubleClickZoom: true,
-            forceNoAttributionControl: true, 
+            forceNoAttributionControl: true,
             navigationControl: false,
-            geolocateControl: false,         
+            geolocateControl: false,
         });
+
+        mapRef.current = map;
 
         map.on("load", () => {
             const markerElement = document.createElement("div");
@@ -61,49 +95,6 @@ export default function MapCard({ className }: MapCardProps) {
             })
                 .setLngLat(TEHRAN_CENTER)
                 .addTo(map);
-
-            const windColorRamp = new ColorRamp({
-
-                stops: [
-                    { value: 0, color: [15, 105, 158, 205] },
-                    { value: 10, color: [20, 125, 179, 205] },
-                    { value: 20, color: [28, 143, 195, 205] },
-                    { value: 30, color: [44, 160, 211, 205] },
-                    { value: 40, color: [75, 184, 226, 205] },
-                ],
-            });
-
-            // const nextLayer = new WindLayer({
-            //     id: "maptiler-wind",
-            //     opacity: 0.7,
-            //     colorramp: windColorRamp,
-            //     color: [126, 220, 255, 230],
-            //     fastColor: [177, 237, 255, 245],
-            //     smooth: true,
-            //     density: 50,
-            // });
-
-            const nextLayer = new TemperatureLayer({
-                id: "maptiler-temperature",
-                opacity: 0.7,
-            });
-
-            // const nextLayer = new PrecipitationLayer({
-            //     id: "maptiler-precipitation",
-            //     opacity: 0.75,
-            // });
-
-            // const nextLayer = new RadarLayer({
-            //     id: "maptiler-radar",
-            //     opacity: 0.75,
-            // });
-
-            // const nextLayer = new PressureLayer({
-            //     id: "maptiler-pressure",
-            //     opacity: 0.75,
-            // });
-
-            map.addLayer(nextLayer);
         });
 
         map.on("error", (event) => {
@@ -111,20 +102,165 @@ export default function MapCard({ className }: MapCardProps) {
         });
 
         return () => {
+            mapRef.current = null;
+            activeLayerRef.current = null;
             map.remove();
         };
     }, []);
 
+    useEffect(() => {
+        const map = mapRef.current;
+
+        if (!map) return;
+
+        let cancelled = false;
+
+        const updateLayer = async () => {
+            if (!map.isStyleLoaded()) {
+                await new Promise<void>((resolve) => {
+                    map.once("load", resolve);
+                });
+            }
+
+            if (cancelled) return;
+
+            if (activeLayerRef.current) {
+                map.removeLayer(activeLayerRef.current);
+                activeLayerRef.current = null;
+            }
+
+            let nextLayer: WindLayer | TemperatureLayer | PrecipitationLayer;
+
+            if (activeLayer === "wind") {
+                const windColorRamp = new ColorRamp({
+                    stops: [
+                        { value: 0, color: [15, 105, 158, 205] },
+                        { value: 10, color: [20, 125, 179, 205] },
+                        { value: 20, color: [28, 143, 195, 205] },
+                        { value: 30, color: [44, 160, 211, 205] },
+                        { value: 40, color: [75, 184, 226, 205] },
+                    ],
+                });
+
+                nextLayer = new WindLayer({
+                    id: "maptiler-wind",
+                    opacity: 0.7,
+                    colorramp: windColorRamp,
+                    color: [126, 220, 255, 230],
+                    fastColor: [177, 237, 255, 245],
+                    smooth: true,
+                    density: 2,
+                    maxAmount: 128,
+                    speed: 0.0006,
+                    fadeFactor: 0.1,
+                });
+            } else if (activeLayer === "temperature") {
+                nextLayer = new TemperatureLayer({
+                    id: "maptiler-temperature",
+                    opacity: 0.7,
+                });
+            } else {
+                nextLayer = new PrecipitationLayer({
+                    id: "maptiler-precipitation",
+                    opacity: 0.75,
+                });
+            }
+
+            if (cancelled) return;
+
+            try {
+                map.addLayer(nextLayer);
+                activeLayerRef.current = nextLayer.id;
+            } catch (error) {
+                console.error("Weather layer error:", error);
+            }
+        };
+
+        void updateLayer();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [activeLayer]);
+
+    const selectedLayer = WEATHER_LAYERS.find(
+        (layer) => layer.id === activeLayer,
+    )!;
+
     return (
         <WeatherCard
-            title="WEATHER MAP"
+            title={
+                <div className="flex w-full items-center justify-between gap-3">
+                    <span>WEATHER MAP</span>
+
+                    <div className="relative">
+                        <button
+                            type="button"
+                            onClick={() => setMenuOpen((open) => !open)}
+                            aria-label="Select weather map layer"
+                            aria-expanded={menuOpen}
+                            className="flex items-center gap-2 rounded-lg border border-black/10 bg-white/70 px-2.5 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10"
+                        >
+                            <Stack size={16} weight="regular" />
+                            <span>Layers</span>
+                            <CaretDown
+                                size={13}
+                                className={`transition-transform ${
+                                    menuOpen ? "rotate-180" : ""
+                                }`}
+                            />
+                        </button>
+
+                        {menuOpen && (
+                            <div
+                                role="menu"
+                                className="absolute right-0 top-full z-20 mt-2 min-w-48 rounded-xl border border-black/10 bg-white p-1.5 shadow-xl dark:border-white/10 dark:bg-[#17171b]"
+                            >
+                                {WEATHER_LAYERS.map((layer) => {
+                                    const Icon = layer.icon;
+                                    const isActive = activeLayer === layer.id;
+
+                                    return (
+                                        <button
+                                            key={layer.id}
+                                            type="button"
+                                            role="menuitemradio"
+                                            aria-checked={isActive}
+                                            onClick={() => {
+                                                setActiveLayer(layer.id);
+                                                setMenuOpen(false);
+                                            }}
+                                            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${
+                                                isActive
+                                                    ? "bg-black/5 text-gray-900 dark:bg-white/10 dark:text-white"
+                                                    : "text-gray-600 hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/5"
+                                            }`}
+                                        >
+                                            <Icon size={19} weight="regular" />
+                                            <span className="flex-1">
+                                                {layer.label}
+                                            </span>
+                                            {isActive && (
+                                                <Check
+                                                    size={16}
+                                                    weight="bold"
+                                                />
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            }
             className={className}
             bodyClassName="flex min-h-0 flex-1 flex-col"
         >
             <div
                 ref={mapContainerRef}
                 className={`min-h-0 w-full flex-1 overflow-hidden rounded-xl ${styles.map}`}
-                aria-label="Weather map centered on Tehran"
+                aria-label={`Weather map showing ${selectedLayer.label}`}
             />
         </WeatherCard>
     );

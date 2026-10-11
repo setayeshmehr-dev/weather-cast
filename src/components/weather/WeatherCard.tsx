@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 type WeatherCardProps = {
-    title: string;
+    title: React.ReactNode;
     icon?: ReactNode;
     divided?: boolean;
     flush?: boolean;
@@ -23,7 +23,7 @@ export default function WeatherCard({
 
     return (
         <section
-            aria-label={title}
+            aria-label={typeof title === "string" ? title : "Weather card"}
             className={`flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[18px] border border-white/20 bg-black/10 p-3 text-white backdrop-blur-lg min-[656px]:p-2.5 ${className}`}
         >
             <h2
