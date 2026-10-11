@@ -6,6 +6,7 @@ import FeelsLikeCard from "@/components/weather/FeelsLikeCard";
 import HourlyForecast from "@/components/weather/HourlyForecast";
 import HumidityCard from "@/components/weather/HumidityCard";
 import MapCard from "@/components/weather/MapCard";
+import MoonCard from "@/components/weather/MoonCard";
 import PrecipitationCard from "@/components/weather/PrecipitationCard";
 import PressureCard from "@/components/weather/PressureCard";
 import TenDayForecast from "@/components/weather/TenDayForecast";
@@ -156,8 +157,11 @@ export default function Home() {
                         className={windClassName}
                     />
 
-                    <WeatherCard
-                        title="MOON PHASE"
+                    <MoonCard
+                        current={current}
+                        date={daily[0]?.date ?? null}
+                        loading={loading}
+                        error={error}
                         className={moonClassName}
                     />
 

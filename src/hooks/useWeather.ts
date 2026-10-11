@@ -28,6 +28,8 @@ export type DailyItem = {
 export type PressureTrend = "rising" | "falling" | "steady";
 
 export type CurrentWeather = {
+    time: string;
+    utcOffsetSeconds: number;
     temperature: number;
     feelsLike: number;
     pressure: number;
@@ -48,6 +50,7 @@ export type CurrentWeather = {
 };
 
 type OpenMeteoResponse = {
+    utc_offset_seconds: number;
     current: {
         time: string;
         temperature_2m: number;
@@ -206,6 +209,8 @@ export function useWeather() {
                             : "steady";
 
                 const weather: CurrentWeather = {
+                    time: currentTime,
+                    utcOffsetSeconds: data.utc_offset_seconds,
                     temperature: data.current.temperature_2m,
                     feelsLike: data.current.apparent_temperature,
                     pressure: data.current.pressure_msl,
