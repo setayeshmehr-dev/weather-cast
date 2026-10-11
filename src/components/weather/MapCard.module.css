@@ -1,4 +1,5 @@
 .map {
     position: relative;
     isolation: isolate;
+    min-height: 240px;
 }

@@ -1,7 +1,7 @@
-
 "use client";
 
 import { useEffect, useRef } from "react";
+import { Map as MapLibreMap, Marker, setWorkerUrl } from "maplibre-gl";
 import WeatherCard from "@/components/weather/WeatherCard";
 import styles from "./MapCard.module.css";
 
@@ -9,53 +9,58 @@ type MapCardProps = {
     className?: string;
 };
 
-const TEHRAN_POSITION: [number, number] = [35.69, 51.42];
+const TEHRAN_CENTER: [number, number] = [51.42, 35.69];
+
+setWorkerUrl(
+    new URL("maplibre-gl/dist/maplibre-gl-worker.mjs", import.meta.url).toString()
+);
 
 export default function MapCard({ className }: MapCardProps) {
     const mapContainerRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
-        let map: import("leaflet").Map | undefined;
+        let map: MapLibreMap | undefined;
         let cancelled = false;
 
         const initializeMap = async () => {
             const container = mapContainerRef.current;
+            const apiKey = process.env.NEXT_PUBLIC_CARTO_API_KEY;
 
-            if (!container) return;
+            if (!container || !apiKey) {
+                console.error("MapLibre: CARTO API key is missing.");
+                return;
+            }
 
-            const L = await import("leaflet");
+            if (cancelled) return;
 
-            if (cancelled || !mapContainerRef.current) return;
-
-            map = L.map(container, {
-                zoomControl: false,
-                attributionControl: true,
-            }).setView(TEHRAN_POSITION, 10);
-
-            L.tileLayer(
-                `https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png?key=${process.env.NEXT_PUBLIC_CARTO_API_KEY}`,
-                {
-                    subdomains: "abcd",
-                    maxZoom: 20,
-                    updateWhenIdle: true,
-                    updateWhenZooming: false,
-                    keepBuffer: 3,
-                    attribution:
-                        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                }
-            ).addTo(map);
-
-            const markerIcon = L.divIcon({
-                className: "weather-map-marker",
-                html: `
-                    <span class="weather-map-marker__glow"></span>
-                    <span class="weather-map-marker__core"></span>
-                `,
-                iconSize: [20, 20],
-                iconAnchor: [10, 10],
+            map = new MapLibreMap({
+                container,
+                style: `https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json?key=${apiKey}`,
+                center: TEHRAN_CENTER,
+                zoom: 10,
+                attributionControl: false,
+                dragRotate: false,
+                pitchWithRotate: false,
+                doubleClickZoom: true,
             });
 
-            L.marker(TEHRAN_POSITION, { icon: markerIcon }).addTo(map);
+            const markerElement = document.createElement("div");
+            markerElement.className = "weather-map-marker";
+            markerElement.innerHTML = `
+                <span class="weather-map-marker__glow"></span>
+                <span class="weather-map-marker__core"></span>
+            `;
+
+            new Marker({
+                element: markerElement,
+                anchor: "center",
+            })
+                .setLngLat(TEHRAN_CENTER)
+                .addTo(map);
+
+            map.on("error", (event) => {
+                console.error("MapLibre map error:", event.error);
+            });
         };
 
         void initializeMap();

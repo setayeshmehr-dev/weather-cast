@@ -77,7 +77,7 @@ export default function Home() {
 
     return (
         <main className="min-h-screen bg-linear-to-b from-sky-700 to-slate-900 px-4 py-6">
-            <div className="@container mx-auto w-full min-[656px]:max-w-[624px] min-[976px]:max-w-[944px]">
+            <div className="@container mx-auto w-full min-[656px]:max-w-156 min-[976px]:max-w-236">
                 <section className="my-8 flex flex-col items-center justify-center text-center text-white sm:my-10">
                     <h1 className="text-[34px] leading-tight capitalize">
                         Tehran
@@ -121,7 +121,7 @@ export default function Home() {
 
                 <section
                     aria-label="Weather details"
-                    className="grid [--cols:2] [--gap:12px] [--cell:calc((100cqw_-_var(--gap))_/_2)] min-[656px]:[--cols:4] min-[656px]:[--gap:16px] min-[656px]:[--cell:144px] min-[976px]:[--cols:6]"
+                    className="grid [--cols:2] [--gap:12px] [--cell:calc((100cqw-var(--gap))/2)] min-[656px]:[--cols:4] min-[656px]:[--gap:16px] min-[656px]:[--cell:144px] min-[976px]:[--cols:6]"
                     style={{
                         gridTemplateColumns: "repeat(var(--cols), var(--cell))",
                         gridAutoRows: "var(--cell)",
