@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useId, useMemo } from "react";
@@ -8,33 +9,9 @@ import type { CurrentWeather } from "@/hooks/useWeather";
 import { getMoonInfo } from "@/lib/moon";
 import type { MoonInfo } from "@/lib/moon";
 
-// Default city (Tehran). Duplicated from the weather hooks until city management exists.
 const LATITUDE = 35.69;
 const LONGITUDE = 51.42;
 
-// Soft dark patches that imitate the lunar maria: [cx, cy, rx, ry, opacity].
-const MARIA: [number, number, number, number, number][] = [
-    [34, 36, 13, 10, 0.16],
-    [52, 30, 8, 7, 0.14],
-    [58, 46, 10, 8, 0.15],
-    [74, 38, 5, 4, 0.14],
-    [26, 56, 10, 12, 0.12],
-    [44, 62, 9, 7, 0.12],
-    [60, 72, 7, 5, 0.1],
-    [40, 80, 12, 4, 0.08],
-];
-
-// Small craters: [cx, cy, r].
-const CRATERS: [number, number, number][] = [
-    [50, 76, 4],
-    [38, 20, 3],
-    [68, 62, 3.5],
-    [22, 40, 2.5],
-    [64, 24, 2.5],
-    [72, 74, 2.5],
-];
-
-// Lit part of the disk (waxing: right side). The terminator is an ellipse arc.
 function litPath(illumination: number): string {
     const radiusX = 48 * Math.abs(1 - 2 * illumination);
     const sweep = illumination > 0.5 ? 1 : 0;
@@ -57,7 +34,12 @@ function MoonDisk({
 }: MoonDiskProps) {
     const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
     const clipId = `${id}-moon-clip`;
-    const blurId = `${id}-moon-blur`;
+    const phaseMaskId = `${id}-moon-phase`;
+    const shadowId = `${id}-moon-shadow`;
+
+    const phaseTransform = waxing
+        ? undefined
+        : "translate(100 0) scale(-1 1)";
 
     return (
         <svg
@@ -70,57 +52,47 @@ function MoonDisk({
                     <circle cx={50} cy={50} r={48} />
                 </clipPath>
 
+                <mask id={phaseMaskId}>
+                    <rect width={100} height={100} fill="#fff" />
+                    <path
+                        d={litPath(illumination)}
+                        fill="#000"
+                        transform={phaseTransform}
+                    />
+                </mask>
+
                 {detailed && (
-                    <filter id={blurId}>
+                    <filter id={shadowId}>
                         <feGaussianBlur stdDeviation={1.6} />
                     </filter>
                 )}
             </defs>
 
-            <circle cx={50} cy={50} r={48} fill="#5d6c9a" fillOpacity={0.55} />
+            <g clipPath={`url(#${clipId})`}>
+                <image
+                    href="/images/moon.webp"
+                    x={-8}
+                    y={-8}
+                    width={115}
+                    height={115}
+                    preserveAspectRatio="xMidYMid slice"
+                />
 
-            <g transform={waxing ? undefined : "translate(100 0) scale(-1 1)"}>
-                <path
-                    d={litPath(illumination)}
-                    fill="#d3dcf5"
-                    fillOpacity={0.9}
+                <rect
+                    width={100}
+                    height={100}
+                    fill="#010104"
+                    fillOpacity={0.88}
+                    mask={`url(#${phaseMaskId})`}
+                    transform={phaseTransform}
                 />
             </g>
-
-            {detailed && (
-                <g clipPath={`url(#${clipId})`}>
-                    <g filter={`url(#${blurId})`} fill="#1b2340">
-                        {MARIA.map(([cx, cy, rx, ry, opacity]) => (
-                            <ellipse
-                                key={`${cx}-${cy}`}
-                                cx={cx}
-                                cy={cy}
-                                rx={rx}
-                                ry={ry}
-                                fillOpacity={opacity}
-                            />
-                        ))}
-                    </g>
-
-                    <g
-                        fill="none"
-                        stroke="#ffffff"
-                        strokeOpacity={0.14}
-                        strokeWidth={0.8}
-                    >
-                        {CRATERS.map(([cx, cy, r]) => (
-                            <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r={r} />
-                        ))}
-                    </g>
-                </g>
-            )}
 
             <circle
                 cx={50}
                 cy={50}
                 r={48}
                 fill="none"
-                stroke="#ffffff"
                 strokeOpacity={0.12}
                 strokeWidth={0.8}
             />
