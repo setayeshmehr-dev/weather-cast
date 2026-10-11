@@ -17,6 +17,7 @@ import WindCard from "@/components/weather/WindCard";
 import { useAirQuality } from "@/hooks/useAirQuality";
 import { useClimateAverage } from "@/hooks/useClimateAverage";
 import { useWeather } from "@/hooks/useWeather";
+import SunriseCard from "@/components/weather/SunriseCard";
 
 /*
  * Breakpoints (viewport):
@@ -166,9 +167,12 @@ export default function Home() {
                     />
 
                     <UVIndexCard className={uvIndexClassName} />
-
-                    <WeatherCard
-                        title="SUNRISE"
+                    
+                    <SunriseCard
+                        current={current}
+                        forecast={forecast}
+                        loading={loading}
+                        error={error}
                         className={sunriseClassName}
                     />
 
