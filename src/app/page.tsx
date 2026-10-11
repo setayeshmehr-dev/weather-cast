@@ -4,7 +4,9 @@
 import AirQualityCard from "@/components/weather/AirQualityCard";
 import HourlyForecast from "@/components/weather/HourlyForecast";
 import HumidityCard from "@/components/weather/HumidityCard";
+import MapCard from "@/components/weather/MapCard";
 import TenDayForecast from "@/components/weather/TenDayForecast";
+import UVIndexCard from "@/components/weather/UVIndexCard";
 import VisibilityCard from "@/components/weather/VisibilityCard";
 import WeatherCard from "@/components/weather/WeatherCard";
 import WindCard from "@/components/weather/WindCard";
@@ -29,16 +31,14 @@ const visibilityClassName =
 const humidityClassName =
     "min-[656px]:col-start-2 min-[656px]:row-start-6 min-[976px]:col-start-3 min-[976px]:row-start-4";
 
+const uvIndexClassName =
+    "min-[656px]:col-start-1 min-[656px]:row-start-5 min-[976px]:col-start-3 min-[976px]:row-start-3";
+
 const remainingCards = [
     {
         title: "MOON PHASE",
         className:
             "col-span-2 min-[656px]:col-start-1 min-[656px]:row-start-4",
-    },
-    {
-        title: "UV INDEX",
-        className:
-            "min-[656px]:col-start-1 min-[656px]:row-start-5 min-[976px]:col-start-3 min-[976px]:row-start-3",
     },
     {
         title: "SUNRISE",
@@ -137,10 +137,7 @@ export default function Home() {
                         className={tenDayClassName}
                     />
 
-                    <WeatherCard
-                        title="WEATHER MAP"
-                        className={mapClassName}
-                    />
+                    <MapCard className={mapClassName} />
 
                     <AirQualityCard
                         airQuality={airQuality}
@@ -169,6 +166,8 @@ export default function Home() {
                         error={error}
                         className={humidityClassName}
                     />
+
+                    <UVIndexCard className={uvIndexClassName} />
 
                     {remainingCards.map((card) => (
                         <WeatherCard
