@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -26,8 +25,15 @@ export type DailyItem = {
     precipitationChance: number;
 };
 
+export type PressureTrend = "rising" | "falling" | "steady";
+
 export type CurrentWeather = {
     temperature: number;
+    feelsLike: number;
+    pressure: number;
+    pressureTrend: PressureTrend;
+    precipitationLast24h: number;
+    precipitationNext24h: number;
     weatherCode: number;
     isDay: boolean;
     condition: string;
@@ -45,6 +51,8 @@ type OpenMeteoResponse = {
     current: {
         time: string;
         temperature_2m: number;
+        apparent_temperature: number;
+        pressure_msl: number;
         weather_code: number;
         is_day: number;
         wind_speed_10m: number;
@@ -59,6 +67,8 @@ type OpenMeteoResponse = {
         relative_humidity_2m: (number | null)[];
         dew_point_2m: (number | null)[];
         visibility: (number | null)[];
+        precipitation: (number | null)[];
+        pressure_msl: (number | null)[];
     };
     daily: {
         time: string[];
@@ -70,6 +80,9 @@ type OpenMeteoResponse = {
         precipitation_probability_max: (number | null)[];
     };
 };
+
+// Pressure change (hPa) over 3 hours from which the trend is rising or falling.
+const PRESSURE_TREND_THRESHOLD = 1;
 
 function getWeatherCondition(code: number): string {
     if (code === 0) return "Clear sky";
@@ -135,10 +148,10 @@ export function useWeather() {
                 const api =
                     "https://api.open-meteo.com/v1/forecast" +
                     "?latitude=35.69&longitude=51.42" +
-                    "&current=temperature_2m,weather_code,is_day,wind_speed_10m,wind_gusts_10m,wind_direction_10m" +
-                    "&hourly=temperature_2m,weather_code,is_day,relative_humidity_2m,dew_point_2m,visibility" +
+                    "&current=temperature_2m,apparent_temperature,pressure_msl,weather_code,is_day,wind_speed_10m,wind_gusts_10m,wind_direction_10m" +
+                    "&hourly=temperature_2m,weather_code,is_day,relative_humidity_2m,dew_point_2m,visibility,precipitation,pressure_msl" +
                     "&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max" +
-                    "&forecast_days=10&timezone=Asia%2FTehran";
+                    "&past_days=1&forecast_days=10&timezone=Asia%2FTehran";
 
                 const response = await fetch(api, { signal: controller.signal });
                 if (!response.ok) throw new Error("Failed to fetch weather.");
@@ -154,6 +167,7 @@ export function useWeather() {
                     throw new Error("Daily weather data is unavailable.");
                 }
 
+                // Closest hour: used for instant values (humidity, dew point, visibility).
                 const currentHourIndex = getCurrentHourIndex(
                     data.hourly.time,
                     currentTime
@@ -163,8 +177,41 @@ export function useWeather() {
                     throw new Error("Current hourly weather data is unavailable.");
                 }
 
+                // Last completed hour: precipitation and pressure are indexed by hour,
+                // and the hourly arrays start yesterday (past_days=1).
+                const lastHourIndex = data.hourly.time.indexOf(
+                    `${currentTime.slice(0, 13)}:00`
+                );
+
+                if (lastHourIndex < 24) {
+                    throw new Error("Incomplete hourly data.");
+                }
+
+                const sumPrecipitation = (from: number, to: number) =>
+                    data.hourly.precipitation
+                        .slice(from, to)
+                        .reduce<number>((sum, value) => sum + (value ?? 0), 0);
+
+                const pressureBefore = data.hourly.pressure_msl[lastHourIndex - 3];
+                const pressureChange =
+                    pressureBefore === null || pressureBefore === undefined
+                        ? 0
+                        : data.current.pressure_msl - pressureBefore;
+
+                const pressureTrend: PressureTrend =
+                    pressureChange >= PRESSURE_TREND_THRESHOLD
+                        ? "rising"
+                        : pressureChange <= -PRESSURE_TREND_THRESHOLD
+                            ? "falling"
+                            : "steady";
+
                 const weather: CurrentWeather = {
                     temperature: data.current.temperature_2m,
+                    feelsLike: data.current.apparent_temperature,
+                    pressure: data.current.pressure_msl,
+                    pressureTrend,
+                    precipitationLast24h: sumPrecipitation(lastHourIndex - 23, lastHourIndex + 1),
+                    precipitationNext24h: sumPrecipitation(lastHourIndex + 1, lastHourIndex + 25),
                     weatherCode: data.current.weather_code,
                     isDay: data.current.is_day === 1,
                     condition: getWeatherCondition(data.current.weather_code),
@@ -177,11 +224,6 @@ export function useWeather() {
                     dewPoint: data.hourly.dew_point_2m[currentHourIndex],
                     visibility: data.hourly.visibility[currentHourIndex],
                 };
-
-                console.log("Hourly index:", currentHourIndex);
-                console.log("Humidity:", weather.relativeHumidity);
-                console.log("Dew point:", weather.dewPoint);
-                console.log("Visibility:", weather.visibility);
 
                 const hours: HourlyItem[] = data.hourly.time
                     .map((time, index) => ({
@@ -220,11 +262,6 @@ export function useWeather() {
                     }))
                     .slice(dayIndex);
 
-                console.log("Hourly index:", currentHourIndex);
-                console.log("Humidity:", weather.relativeHumidity);
-                console.log("Dew point:", weather.dewPoint);
-                console.log("Visibility:", weather.visibility);
-                
                 setCurrent(weather);
                 setForecast([...hours, ...events].sort((a, b) => a.time.localeCompare(b.time)));
                 setDaily(days);
