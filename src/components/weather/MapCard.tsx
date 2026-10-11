@@ -35,7 +35,7 @@ export default function MapCard({ className }: MapCardProps) {
 
             map = new MapLibreMap({
                 container,
-                style: `https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json?key=${apiKey}`,
+                style: `https://basemaps.cartocdn.com/gl/positron-gl-style/style.json?key=${apiKey}`,
                 center: TEHRAN_CENTER,
                 zoom: 10,
                 attributionControl: false,
