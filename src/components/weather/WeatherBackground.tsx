@@ -45,7 +45,7 @@ export default function WeatherBackground({
     const [testWeather, setTestWeather] = useState("clear");
     const [testPeriod, setTestPeriod] = useState<"day" | "night">("day");
     const [testSpecial, setTestSpecial] = useState("");
-    const [videoAvailable, setVideoAvailable] = useState(false);
+    const [loadedVideoSrc, setLoadedVideoSrc] = useState<string | null>(null);
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -67,10 +67,7 @@ export default function WeatherBackground({
         : `${weatherKey}-${period}.webm`;
 
     const videoSrc = `/videos/${filename}`;
-
-    useEffect(() => {
-        setVideoAvailable(false);
-    }, [videoSrc]);
+    const videoAvailable = loadedVideoSrc === videoSrc;
 
     return (
         <>
@@ -86,8 +83,12 @@ export default function WeatherBackground({
                     loop
                     playsInline
                     preload="auto"
-                    onCanPlay={() => setVideoAvailable(true)}
-                    onError={() => setVideoAvailable(false)}
+                    onCanPlay={() => setLoadedVideoSrc(videoSrc)}
+                    onError={() =>
+                        setLoadedVideoSrc((loadedSrc) =>
+                            loadedSrc === videoSrc ? null : loadedSrc
+                        )
+                    }
                 />
                 <div className="absolute inset-0 bg-slate-950/35" />
             </div>
@@ -128,8 +129,12 @@ export default function WeatherBackground({
                             }}
                             className="rounded-md bg-white/10 p-2 outline-none"
                         >
-                            <option value="day" className="bg-slate-900">Day</option>
-                            <option value="night" className="bg-slate-900">Night</option>
+                            <option value="day" className="bg-slate-900">
+                                Day
+                            </option>
+                            <option value="night" className="bg-slate-900">
+                                Night
+                            </option>
                         </select>
                     </label>
 
@@ -159,8 +164,16 @@ export default function WeatherBackground({
                         File: public/videos/{filename}
                     </p>
 
-                    <p className={videoAvailable ? "text-emerald-300" : "text-amber-300"}>
-                        {videoAvailable ? "Video loaded" : "Video missing or loading"}
+                    <p
+                        className={
+                            videoAvailable
+                                ? "text-emerald-300"
+                                : "text-amber-300"
+                        }
+                    >
+                        {videoAvailable
+                            ? "Video loaded"
+                            : "Video missing or loading"}
                     </p>
                 </div>
             )}

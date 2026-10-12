@@ -41,11 +41,7 @@ export default function Home() {
     };
 
     return (
-        <div className="flex h-dvh overflow-hidden bg-linear-to-b from-sky-700 to-slate-900">
-            <WeatherBackground
-                weatherCode={null}
-                isDay={true}
-            />
+        <div className="relative isolate flex h-dvh overflow-hidden bg-linear-to-b from-sky-700 to-slate-900">
             {sidebarOpen && (
                 <div
                     className="fixed inset-0 z-30 bg-black/40 md:hidden"

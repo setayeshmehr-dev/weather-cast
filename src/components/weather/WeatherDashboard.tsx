@@ -18,6 +18,7 @@ import { useAirQuality } from "@/hooks/useAirQuality";
 import { useClimateAverage } from "@/hooks/useClimateAverage";
 import { useWeather } from "@/hooks/useWeather";
 import type { City } from "@/lib/cities";
+import WeatherBackground from "@/components/weather/WeatherBackground";
 
 /*
  * Layout breakpoints are container queries on the width of the content column
@@ -87,168 +88,175 @@ export default function WeatherDashboard({ city }: WeatherDashboardProps) {
     } = useClimateAverage(daily[0]?.date ?? null, city);
 
     return (
-        <main className="px-4 py-6">
-            <div className="@container mx-auto w-full @min-[656px]:max-w-156 @min-[976px]:max-w-236">
-                <section className="my-8 flex flex-col items-center justify-center text-center text-white sm:my-10">
-                    <h1 className="text-[34px] leading-tight">
-                        {city.name}
-                    </h1>
+        <>
 
-                    {loading && (
-                        <p className="mt-4 text-white/70">
-                            Loading weather...
-                        </p>
-                    )}
+            <WeatherBackground
+                weatherCode={current?.weatherCode ?? null}
+                isDay={current?.isDay ?? true}
+            />
+            <main className="relative z-10 px-4 py-6">
+                <div className="@container mx-auto w-full @min-[656px]:max-w-156 @min-[976px]:max-w-236">
+                    <section className="my-8 flex flex-col items-center justify-center text-center text-white sm:my-10">
+                        <h1 className="text-[34px] leading-tight">
+                            {city.name}
+                        </h1>
 
-                    {error && (
-                        <p role="alert" className="mt-4 text-white/80">
-                            {error}
-                        </p>
-                    )}
-
-                    {!loading && !error && current && (
-                        <>
-                            <p className="mt-1 text-[96px] leading-none font-extralight">
-                                {Math.round(current.temperature)}°
+                        {loading && (
+                            <p className="mt-4 text-white/70">
+                                Loading weather...
                             </p>
+                        )}
 
-                            <p className="mt-2 text-xl">
-                                {current.condition}
+                        {error && (
+                            <p role="alert" className="mt-4 text-white/80">
+                                {error}
                             </p>
+                        )}
 
-                            <p className="text-xl">
-                                H:{Math.round(current.max)}° L:{Math.round(current.min)}°
-                            </p>
-                        </>
-                    )}
-                </section>
+                        {!loading && !error && current && (
+                            <>
+                                <p className="mt-1 text-[96px] leading-none font-extralight">
+                                    {Math.round(current.temperature)}°
+                                </p>
 
-                <HourlyForecast
-                    current={current}
-                    forecast={forecast}
-                    loading={loading}
-                    error={error}
-                />
+                                <p className="mt-2 text-xl">
+                                    {current.condition}
+                                </p>
 
-                <section
-                    aria-label="Weather details"
-                    className="grid [--cols:2] [--gap:12px] [--cell:calc((100cqw-var(--gap))/2)] @min-[624px]:[--cols:4] @min-[624px]:[--gap:16px] @min-[624px]:[--cell:144px] @min-[944px]:[--cols:6]"
-                    style={{
-                        gridTemplateColumns: "repeat(var(--cols), var(--cell))",
-                        gridAutoRows: "var(--cell)",
-                        gap: "var(--gap)",
-                        marginTop: "var(--gap)",
-                    }}
-                >
-                    <TenDayForecast
-                        current={current}
-                        daily={daily}
-                        loading={loading}
-                        error={error}
-                        className={tenDayClassName}
-                    />
+                                <p className="text-xl">
+                                    H:{Math.round(current.max)}° L:{Math.round(current.min)}°
+                                </p>
+                            </>
+                        )}
+                    </section>
 
-                    <MapCard
-                        city={city}
-                        current={current}
-                        className={mapClassName}
-                    />
-
-                    <AirQualityCard
-                        airQuality={airQuality}
-                        loading={airQualityLoading}
-                        error={airQualityError}
-                        className={airQualityClassName}
-                    />
-
-                    <WindCard
-                        current={current}
-                        loading={loading}
-                        error={error}
-                        className={windClassName}
-                    />
-
-                    <MoonCard
-                        current={current}
-                        date={daily[0]?.date ?? null}
-                        latitude={city.latitude}
-                        longitude={city.longitude}
-                        loading={loading}
-                        error={error}
-                        className={moonClassName}
-                    />
-
-                    <UVIndexCard className={uvIndexClassName} />
-
-                    <SunriseCard
+                    <HourlyForecast
                         current={current}
                         forecast={forecast}
                         loading={loading}
                         error={error}
-                        className={sunriseClassName}
                     />
 
-                    <FeelsLikeCard
-                        current={current}
-                        loading={loading}
-                        error={error}
-                        className={feelsLikeClassName}
-                    />
+                    <section
+                        aria-label="Weather details"
+                        className="grid [--cols:2] [--gap:12px] [--cell:calc((100cqw-var(--gap))/2)] @min-[624px]:[--cols:4] @min-[624px]:[--gap:16px] @min-[624px]:[--cell:144px] @min-[944px]:[--cols:6]"
+                        style={{
+                            gridTemplateColumns: "repeat(var(--cols), var(--cell))",
+                            gridAutoRows: "var(--cell)",
+                            gap: "var(--gap)",
+                            marginTop: "var(--gap)",
+                        }}
+                    >
+                        <TenDayForecast
+                            current={current}
+                            daily={daily}
+                            loading={loading}
+                            error={error}
+                            className={tenDayClassName}
+                        />
 
-                    <PrecipitationCard
-                        current={current}
-                        loading={loading}
-                        error={error}
-                        className={precipitationClassName}
-                    />
+                        <MapCard
+                            city={city}
+                            current={current}
+                            className={mapClassName}
+                        />
 
-                    <VisibilityCard
-                        current={current}
-                        loading={loading}
-                        error={error}
-                        className={visibilityClassName}
-                    />
+                        <AirQualityCard
+                            airQuality={airQuality}
+                            loading={airQualityLoading}
+                            error={airQualityError}
+                            className={airQualityClassName}
+                        />
 
-                    <HumidityCard
-                        current={current}
-                        loading={loading}
-                        error={error}
-                        className={humidityClassName}
-                    />
+                        <WindCard
+                            current={current}
+                            loading={loading}
+                            error={error}
+                            className={windClassName}
+                        />
 
-                    <PressureCard
-                        current={current}
-                        loading={loading}
-                        error={error}
-                        className={pressureClassName}
-                    />
+                        <MoonCard
+                            current={current}
+                            date={daily[0]?.date ?? null}
+                            latitude={city.latitude}
+                            longitude={city.longitude}
+                            loading={loading}
+                            error={error}
+                            className={moonClassName}
+                        />
 
-                    <AveragesCard
-                        today={current?.max ?? null}
-                        average={climateAverage}
-                        loading={loading || climateLoading}
-                        error={error ?? climateError}
-                        className={averagesClassName}
-                    />
-                </section>
+                        <UVIndexCard className={uvIndexClassName} />
 
-                <footer className="mt-6 text-center text-xs text-white/60">
-                    <p>
-                        Weather data by{" "}
-                        <a
-                            href="https://open-meteo.com/"
-                            target="_blank"
-                            rel="noreferrer"
-                            className="underline"
-                        >
-                            Open-Meteo.com
-                        </a>
-                    </p>
-                    <p>Air quality data: CAMS ENSEMBLE via Open-Meteo</p>
-                    <p>Climate averages: ERA5 reanalysis via Open-Meteo</p>
-                    <p>Location search: GeoNames via Open-Meteo</p>
-                </footer>
-            </div>
-        </main>
+                        <SunriseCard
+                            current={current}
+                            forecast={forecast}
+                            loading={loading}
+                            error={error}
+                            className={sunriseClassName}
+                        />
+
+                        <FeelsLikeCard
+                            current={current}
+                            loading={loading}
+                            error={error}
+                            className={feelsLikeClassName}
+                        />
+
+                        <PrecipitationCard
+                            current={current}
+                            loading={loading}
+                            error={error}
+                            className={precipitationClassName}
+                        />
+
+                        <VisibilityCard
+                            current={current}
+                            loading={loading}
+                            error={error}
+                            className={visibilityClassName}
+                        />
+
+                        <HumidityCard
+                            current={current}
+                            loading={loading}
+                            error={error}
+                            className={humidityClassName}
+                        />
+
+                        <PressureCard
+                            current={current}
+                            loading={loading}
+                            error={error}
+                            className={pressureClassName}
+                        />
+
+                        <AveragesCard
+                            today={current?.max ?? null}
+                            average={climateAverage}
+                            loading={loading || climateLoading}
+                            error={error ?? climateError}
+                            className={averagesClassName}
+                        />
+                    </section>
+
+                    <footer className="mt-6 text-center text-xs text-white/60">
+                        <p>
+                            Weather data by{" "}
+                            <a
+                                href="https://open-meteo.com/"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="underline"
+                            >
+                                Open-Meteo.com
+                            </a>
+                        </p>
+                        <p>Air quality data: CAMS ENSEMBLE via Open-Meteo</p>
+                        <p>Climate averages: ERA5 reanalysis via Open-Meteo</p>
+                        <p>Location search: GeoNames via Open-Meteo</p>
+                    </footer>
+                </div>
+            </main>
+        </>
     );
 }
