@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import type { City } from "@/lib/cities";
+
 export type AirQuality = {
     index: number;
     label: string;
@@ -17,6 +19,12 @@ type AirQualityResponse = {
         time: string[];
         european_aqi: (number | null)[];
     };
+};
+
+type AirQualityState = {
+    key: string;
+    airQuality: AirQuality | null;
+    error: string | null;
 };
 
 // Index difference (points) below which today counts as "similar to yesterday".
@@ -42,25 +50,22 @@ function getTrend(now: number, before: number | null | undefined): AirQuality["t
     return difference > 0 ? "worse" : "better";
 }
 
-export function useAirQuality() {
-    const [airQuality, setAirQuality] = useState<AirQuality | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+export function useAirQuality(city: City) {
+    const { id: key, latitude, longitude } = city;
+
+    const [state, setState] = useState<AirQualityState | null>(null);
 
     useEffect(() => {
         const controller = new AbortController();
 
         async function fetchAirQuality() {
             try {
-                setLoading(true);
-                setError(null);
-
                 const api =
                     "https://air-quality-api.open-meteo.com/v1/air-quality" +
-                    "?latitude=35.69&longitude=51.42" +
+                    `?latitude=${latitude}&longitude=${longitude}` +
                     "&current=european_aqi" +
                     "&hourly=european_aqi" +
-                    "&past_days=1&forecast_days=1&timezone=Asia%2FTehran";
+                    "&past_days=1&forecast_days=1&timezone=auto";
 
                 const response = await fetch(api, { signal: controller.signal });
                 if (!response.ok) throw new Error("Failed to fetch air quality.");
@@ -76,23 +81,36 @@ export function useAirQuality() {
                 const hourIndex = data.hourly.time.indexOf(hourKey);
                 const yesterday = hourIndex >= 24 ? data.hourly.european_aqi[hourIndex - 24] : null;
 
-                setAirQuality({
-                    index,
-                    label: getLabel(index),
-                    trend: getTrend(index, yesterday),
+                setState({
+                    key,
+                    airQuality: {
+                        index,
+                        label: getLabel(index),
+                        trend: getTrend(index, yesterday),
+                    },
+                    error: null,
                 });
             } catch {
                 if (!controller.signal.aborted) {
-                    setError("Unable to load air quality.");
+                    setState({
+                        key,
+                        airQuality: null,
+                        error: "Unable to load air quality.",
+                    });
                 }
-            } finally {
-                if (!controller.signal.aborted) setLoading(false);
             }
         }
 
         void fetchAirQuality();
-        return () => controller.abort();
-    }, []);
 
-    return { airQuality, loading, error };
+        return () => controller.abort();
+    }, [key, latitude, longitude]);
+
+    const result = state !== null && state.key === key ? state : null;
+
+    return {
+        airQuality: result?.airQuality ?? null,
+        loading: result === null,
+        error: result?.error ?? null,
+    };
 }

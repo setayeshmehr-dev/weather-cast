@@ -2,10 +2,18 @@
 
 import { useEffect, useState } from "react";
 
+import type { City } from "@/lib/cities";
+
 type ArchiveResponse = {
     daily: {
         temperature_2m_max: (number | null)[];
     };
+};
+
+type ClimateState = {
+    key: string;
+    average: number | null;
+    error: string | null;
 };
 
 const YEARS = 10;
@@ -37,15 +45,17 @@ function writeCache(key: string, value: number): void {
 }
 
 async function fetchHighs(
+    latitude: number,
+    longitude: number,
     start: string,
     end: string,
     signal: AbortSignal
 ): Promise<number[]> {
     const api =
         "https://archive-api.open-meteo.com/v1/archive" +
-        "?latitude=35.69&longitude=51.42" +
+        `?latitude=${latitude}&longitude=${longitude}` +
         `&start_date=${start}&end_date=${end}` +
-        "&daily=temperature_2m_max&timezone=Asia%2FTehran";
+        "&daily=temperature_2m_max&timezone=auto";
 
     const response = await fetch(api, { signal });
     if (!response.ok) throw new Error("Failed to fetch climate data.");
@@ -58,29 +68,27 @@ async function fetchHighs(
 }
 
 /**
- * Average daily high for the given date (YYYY-MM-DD): the mean over the last
- * 10 years, using a window of ±3 days around the same calendar day.
+ * Average daily high for the given date (YYYY-MM-DD) in the given city: the mean
+ * over the last 10 years, using a window of ±3 days around the same calendar day.
  */
-export function useClimateAverage(date: string | null) {
-    const [average, setAverage] = useState<number | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+export function useClimateAverage(date: string | null, city: City) {
+    const { id, latitude, longitude } = city;
+    const key = date ? `${id}|${date}` : null;
+
+    const [state, setState] = useState<ClimateState | null>(null);
 
     useEffect(() => {
-        if (!date) return;
+        if (!date || !key) return;
 
         const controller = new AbortController();
-        const cacheKey = `weathercast:climate-high:35.69,51.42:${date.slice(5)}`;
+        const cacheKey = `weathercast:climate-high:${id}:${date.slice(5)}`;
 
-        async function fetchAverage(day: string) {
+        async function fetchAverage(stateKey: string, day: string) {
             try {
-                setLoading(true);
-                setError(null);
-
                 const cached = readCache(cacheKey);
 
                 if (cached !== null) {
-                    setAverage(cached);
+                    setState({ key: stateKey, average: cached, error: null });
                     return;
                 }
 
@@ -90,6 +98,8 @@ export function useClimateAverage(date: string | null) {
                     const center = Date.UTC(year - 1 - index, month - 1, dayOfMonth);
 
                     return fetchHighs(
+                        latitude,
+                        longitude,
                         toIsoDate(center - WINDOW_DAYS * DAY_MS),
                         toIsoDate(center + WINDOW_DAYS * DAY_MS),
                         controller.signal
@@ -103,19 +113,28 @@ export function useClimateAverage(date: string | null) {
                 const mean = highs.reduce((sum, value) => sum + value, 0) / highs.length;
 
                 writeCache(cacheKey, mean);
-                setAverage(mean);
+                setState({ key: stateKey, average: mean, error: null });
             } catch {
                 if (!controller.signal.aborted) {
-                    setError("Unable to load climate averages.");
+                    setState({
+                        key: stateKey,
+                        average: null,
+                        error: "Unable to load climate averages.",
+                    });
                 }
-            } finally {
-                if (!controller.signal.aborted) setLoading(false);
             }
         }
 
-        void fetchAverage(date);
-        return () => controller.abort();
-    }, [date]);
+        void fetchAverage(key, date);
 
-    return { average, loading, error };
+        return () => controller.abort();
+    }, [date, key, id, latitude, longitude]);
+
+    const result = key !== null && state !== null && state.key === key ? state : null;
+
+    return {
+        average: result?.average ?? null,
+        loading: result === null,
+        error: result?.error ?? null,
+    };
 }

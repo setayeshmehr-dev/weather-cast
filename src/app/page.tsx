@@ -1,247 +1,113 @@
 "use client";
 
-import AirQualityCard from "@/components/weather/AirQualityCard";
-import AveragesCard from "@/components/weather/AveragesCard";
-import FeelsLikeCard from "@/components/weather/FeelsLikeCard";
-import HourlyForecast from "@/components/weather/HourlyForecast";
-import HumidityCard from "@/components/weather/HumidityCard";
-import MapCard from "@/components/weather/MapCard";
-import MoonCard from "@/components/weather/MoonCard";
-import PrecipitationCard from "@/components/weather/PrecipitationCard";
-import PressureCard from "@/components/weather/PressureCard";
-import TenDayForecast from "@/components/weather/TenDayForecast";
-import UVIndexCard from "@/components/weather/UVIndexCard";
-import VisibilityCard from "@/components/weather/VisibilityCard";
-import WeatherCard from "@/components/weather/WeatherCard";
-import WindCard from "@/components/weather/WindCard";
-import { useAirQuality } from "@/hooks/useAirQuality";
-import { useClimateAverage } from "@/hooks/useClimateAverage";
-import { useWeather } from "@/hooks/useWeather";
-import SunriseCard from "@/components/weather/SunriseCard";
+import { Plus, SidebarSimple } from "@phosphor-icons/react";
+import { useState } from "react";
+
+import Sidebar from "@/components/sidebar/Sidebar";
+import WeatherDashboard from "@/components/weather/WeatherDashboard";
+import { useCities } from "@/hooks/useCities";
 import WeatherBackground from "@/components/weather/WeatherBackground";
+import type { City } from "@/lib/cities";
 
-/*
- * Breakpoints (viewport):
- *  - below 656px      : 2 columns, fluid cells (mobile)
- *  - 656px and above  : 4 columns, fixed 144px cells
- *  - 976px and above  : 6 columns, fixed 144px cells
- * The render order in the grid below is the mobile order (auto placement),
- * so keep it as is: wide cards first, then the small cards in pairs.
- * Larger layouts place every card explicitly.
- */
-const tenDayClassName =
-    "col-span-2 row-span-3 min-[656px]:col-start-1 min-[656px]:row-start-1";
+const MOBILE_QUERY = "(max-width: 767px)";
 
-const mapClassName =
-    "col-span-2 row-span-2 min-[656px]:col-start-3 min-[656px]:row-start-1 min-[976px]:col-start-5";
-
-const airQualityClassName =
-    "col-span-2 min-[656px]:col-start-3 min-[656px]:row-start-3 min-[976px]:row-start-1";
-
-const windClassName =
-    "col-span-2 min-[656px]:col-start-3 min-[656px]:row-start-4 min-[656px]:-my-[calc(var(--cell)_*_0.08)] min-[976px]:row-start-2";
-
-const moonClassName =
-    "col-span-2 min-[656px]:col-start-1 min-[656px]:row-start-4";
-
-const uvIndexClassName =
-    "min-[656px]:col-start-1 min-[656px]:row-start-5 min-[976px]:col-start-3 min-[976px]:row-start-3";
-
-const sunriseClassName =
-    "min-[656px]:col-start-2 min-[656px]:row-start-5 min-[976px]:col-start-4 min-[976px]:row-start-3";
-
-const feelsLikeClassName =
-    "min-[656px]:col-start-3 min-[656px]:row-start-5 min-[976px]:col-start-5 min-[976px]:row-start-3";
-
-const precipitationClassName =
-    "min-[656px]:col-start-4 min-[656px]:row-start-5 min-[976px]:col-start-6 min-[976px]:row-start-3";
-
-const visibilityClassName =
-    "min-[656px]:col-start-1 min-[656px]:row-start-6 min-[976px]:col-start-4 min-[976px]:row-start-4";
-
-const humidityClassName =
-    "min-[656px]:col-start-2 min-[656px]:row-start-6 min-[976px]:col-start-3 min-[976px]:row-start-4";
-
-const pressureClassName =
-    "min-[656px]:col-start-3 min-[656px]:row-start-6 min-[976px]:col-start-5 min-[976px]:row-start-4";
-
-const averagesClassName =
-    "min-[656px]:col-start-4 min-[656px]:row-start-6 min-[976px]:col-start-6 min-[976px]:row-start-4";
+const FLOATING_BUTTON_CLASS =
+    "flex size-10 items-center justify-center rounded-full border border-white/20 bg-white/15 text-white backdrop-blur-md transition-colors hover:bg-white/25";
 
 export default function Home() {
-    const { current, forecast, daily, loading, error } = useWeather();
     const {
-        airQuality,
-        loading: airQualityLoading,
-        error: airQualityError,
-    } = useAirQuality();
-    const {
-        average: climateAverage,
-        loading: climateLoading,
-        error: climateError,
-    } = useClimateAverage(daily[0]?.date ?? null);
+        cities,
+        selectedCity,
+        isSelectedSaved,
+        sidebarOpen,
+        selectCity,
+        addCity,
+        removeCity,
+        setSidebarOpen,
+    } = useCities();
+
+    const [query, setQuery] = useState("");
+
+    const handleSelectCity = (city: City) => {
+        selectCity(city);
+
+        // On small screens the sidebar is an overlay: close it to show the city.
+        if (window.matchMedia(MOBILE_QUERY).matches) setSidebarOpen(false);
+    };
+
+    const handleAddCity = () => {
+        addCity(selectedCity);
+        setQuery("");
+    };
 
     return (
-
-        <main className="relative isolate min-h-screen bg-linear-to-b from-sky-700 to-slate-900 px-4 py-6">
+        <div className="flex h-dvh overflow-hidden bg-linear-to-b from-sky-700 to-slate-900">
             <WeatherBackground
-                weatherCode={current?.weatherCode ?? null}
-                isDay={current?.isDay ?? true}
+                weatherCode={null}
+                isDay={true}
             />
-            <div className="@container relative z-10 mx-auto w-full min-[656px]:max-w-156 min-[976px]:max-w-236">
-                <section className="my-8 flex flex-col items-center justify-center text-center text-white sm:my-10">
-                    <h1 className="text-[34px] leading-tight capitalize">
-                        Tehran
-                    </h1>
-
-                    {loading && (
-                        <p className="mt-4 text-white/70">
-                            Loading weather...
-                        </p>
-                    )}
-
-                    {error && (
-                        <p role="alert" className="mt-4 text-white/80">
-                            {error}
-                        </p>
-                    )}
-
-                    {!loading && !error && current && (
-                        <>
-                            <p className="mt-1 text-[96px] leading-none font-extralight">
-                                {Math.round(current.temperature)}°
-                            </p>
-
-                            <p className="mt-2 text-xl">
-                                {current.condition}
-                            </p>
-
-                            <p className="text-xl">
-                                H:{Math.round(current.max)}° L:{Math.round(current.min)}°
-                            </p>
-                        </>
-                    )}
-                </section>
-
-                <HourlyForecast
-                    current={current}
-                    forecast={forecast}
-                    loading={loading}
-                    error={error}
+            {sidebarOpen && (
+                <div
+                    className="fixed inset-0 z-30 bg-black/40 md:hidden"
+                    onClick={() => setSidebarOpen(false)}
                 />
+            )}
 
-                <section
-                    aria-label="Weather details"
-                    className="grid [--cols:2] [--gap:12px] [--cell:calc((100cqw-var(--gap))/2)] min-[656px]:[--cols:4] min-[656px]:[--gap:16px] min-[656px]:[--cell:144px] min-[976px]:[--cols:6]"
-                    style={{
-                        gridTemplateColumns: "repeat(var(--cols), var(--cell))",
-                        gridAutoRows: "var(--cell)",
-                        gap: "var(--gap)",
-                        marginTop: "var(--gap)",
-                    }}
-                >
-                    <TenDayForecast
-                        current={current}
-                        daily={daily}
-                        loading={loading}
-                        error={error}
-                        className={tenDayClassName}
+            {/*
+              * Desktop: the sidebar takes space and pushes the content (width 0 <-> 264px).
+              * Mobile: it is a fixed overlay that slides in over the content.
+              * The inner box keeps its width so the content does not reflow while sliding.
+              */}
+            <aside
+                inert={!sidebarOpen}
+                className={`z-40 shrink-0 overflow-hidden transition-[width,translate] duration-300 max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:w-66 ${
+                    sidebarOpen
+                        ? "md:w-66 max-md:translate-x-0"
+                        : "md:w-0 max-md:-translate-x-full"
+                }`}
+            >
+                <div className="h-full w-66 p-2">
+                    <Sidebar
+                        cities={cities}
+                        selectedCity={selectedCity}
+                        query={query}
+                        onQueryChange={setQuery}
+                        onSelectCity={handleSelectCity}
+                        onRemoveCity={removeCity}
+                        onClose={() => setSidebarOpen(false)}
                     />
+                </div>
+            </aside>
 
-                    <MapCard current={current} className={mapClassName} />
+            <div className="@container relative z-10 min-w-0 flex-1 overflow-y-auto">
+                <div className="sticky top-0 z-20 h-0">
+                    <div className="flex items-center gap-2 p-3">
+                        {!sidebarOpen && (
+                            <button
+                                type="button"
+                                onClick={() => setSidebarOpen(true)}
+                                aria-label="Show sidebar"
+                                className={FLOATING_BUTTON_CLASS}
+                            >
+                                <SidebarSimple size={20} />
+                            </button>
+                        )}
 
-                    <AirQualityCard
-                        airQuality={airQuality}
-                        loading={airQualityLoading}
-                        error={airQualityError}
-                        className={airQualityClassName}
-                    />
+                        {!isSelectedSaved && (
+                            <button
+                                type="button"
+                                onClick={handleAddCity}
+                                aria-label={`Add ${selectedCity.name} to the list`}
+                                className={FLOATING_BUTTON_CLASS}
+                            >
+                                <Plus size={20} weight="bold" />
+                            </button>
+                        )}
+                    </div>
+                </div>
 
-                    <WindCard
-                        current={current}
-                        loading={loading}
-                        error={error}
-                        className={windClassName}
-                    />
-
-                    <MoonCard
-                        current={current}
-                        date={daily[0]?.date ?? null}
-                        loading={loading}
-                        error={error}
-                        className={moonClassName}
-                    />
-
-                    <UVIndexCard className={uvIndexClassName} />
-                    
-                    <SunriseCard
-                        current={current}
-                        forecast={forecast}
-                        loading={loading}
-                        error={error}
-                        className={sunriseClassName}
-                    />
-
-                    <FeelsLikeCard
-                        current={current}
-                        loading={loading}
-                        error={error}
-                        className={feelsLikeClassName}
-                    />
-
-                    <PrecipitationCard
-                        current={current}
-                        loading={loading}
-                        error={error}
-                        className={precipitationClassName}
-                    />
-
-                    <VisibilityCard
-                        current={current}
-                        loading={loading}
-                        error={error}
-                        className={visibilityClassName}
-                    />
-
-                    <HumidityCard
-                        current={current}
-                        loading={loading}
-                        error={error}
-                        className={humidityClassName}
-                    />
-
-                    <PressureCard
-                        current={current}
-                        loading={loading}
-                        error={error}
-                        className={pressureClassName}
-                    />
-
-                    <AveragesCard
-                        today={current?.max ?? null}
-                        average={climateAverage}
-                        loading={loading || climateLoading}
-                        error={error ?? climateError}
-                        className={averagesClassName}
-                    />
-                </section>
-
-                <footer className="mt-6 text-center text-xs text-white/60">
-                    <p>
-                        Weather data by{" "}
-                        <a
-                            href="https://open-meteo.com/"
-                            target="_blank"
-                            rel="noreferrer"
-                            className="underline"
-                        >
-                            Open-Meteo.com
-                        </a>
-                    </p>
-                    <p>Air quality data: CAMS ENSEMBLE via Open-Meteo</p>
-                    <p>Climate averages: ERA5 reanalysis via Open-Meteo</p>
-                </footer>
+                <WeatherDashboard city={selectedCity} />
             </div>
-        </main>
+        </div>
     );
 }

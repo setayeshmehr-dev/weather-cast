@@ -9,8 +9,7 @@ import type { CurrentWeather } from "@/hooks/useWeather";
 import { getMoonInfo } from "@/lib/moon";
 import type { MoonInfo } from "@/lib/moon";
 
-const LATITUDE = 35.69;
-const LONGITUDE = 51.42;
+
 
 function litPath(illumination: number): string {
     const radiusX = 48 * Math.abs(1 - 2 * illumination);
@@ -103,6 +102,8 @@ function MoonDisk({
 type MoonCardProps = {
     current: CurrentWeather | null;
     date: string | null;
+    latitude: number;
+    longitude: number;
     loading: boolean;
     error: string | null;
     className?: string;
@@ -111,6 +112,8 @@ type MoonCardProps = {
 export default function MoonCard({
     current,
     date,
+    latitude,
+    longitude,
     loading,
     error,
     className,
@@ -123,10 +126,10 @@ export default function MoonCard({
                 Date.parse(`${current.time}Z`) - current.utcOffsetSeconds * 1000,
             date,
             utcOffsetSeconds: current.utcOffsetSeconds,
-            latitude: LATITUDE,
-            longitude: LONGITUDE,
+            latitude,
+            longitude,
         });
-    }, [current, date]);
+    }, [current, date, latitude, longitude]);
 
     const fullMoonDays = moon ? Math.round(moon.daysToFullMoon) : 0;
 

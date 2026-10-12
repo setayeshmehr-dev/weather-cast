@@ -24,7 +24,7 @@ export default function WeatherCard({
     return (
         <section
             aria-label={typeof title === "string" ? title : "Weather card"}
-            className={`flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[18px] border border-white/20 bg-black/10 p-3 text-white backdrop-blur-lg min-[656px]:p-2.5 ${className}`}
+            className={`flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[18px] border border-white/20 bg-black/10 p-3 text-white backdrop-blur-lg @min-[624px]:p-2.5 ${className}`}
         >
             <h2
                 className={`flex shrink-0 items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-white/60 ${

@@ -245,7 +245,7 @@ export default function SunriseCard({
                         {formatTime(isNight ? sunrise.time : sunset.time)}
                     </p>
 
-                    <div className="-mx-3 min-[656px]:-mx-2.5">
+                    <div className="-mx-3 @min-[624px]:-mx-2.5">
                         <SunCurve
                             sunrise={minutesOfDay(sunrise.time)}
                             sunset={minutesOfDay(sunset.time)}

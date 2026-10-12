@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import type { City } from "@/lib/cities";
+
 export type HourlyItem = {
     kind: "hour";
     time: string;
@@ -84,10 +86,21 @@ type OpenMeteoResponse = {
     };
 };
 
+type WeatherState = {
+    key: string;
+    current: CurrentWeather | null;
+    forecast: ForecastItem[];
+    daily: DailyItem[];
+    error: string | null;
+};
+
 // Pressure change (hPa) over 3 hours from which the trend is rising or falling.
 const PRESSURE_TREND_THRESHOLD = 1;
 
-function getWeatherCondition(code: number): string {
+const EMPTY_FORECAST: ForecastItem[] = [];
+const EMPTY_DAILY: DailyItem[] = [];
+
+export function getWeatherCondition(code: number): string {
     if (code === 0) return "Clear sky";
     if (code === 1) return "Mainly clear";
     if (code === 2) return "Partly cloudy";
@@ -133,28 +146,23 @@ function getCurrentHourIndex(times: string[], currentTime: string): number {
     return closestIndex;
 }
 
-export function useWeather() {
-    const [current, setCurrent] = useState<CurrentWeather | null>(null);
-    const [forecast, setForecast] = useState<ForecastItem[]>([]);
-    const [daily, setDaily] = useState<DailyItem[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+export function useWeather(city: City) {
+    const { id: key, latitude, longitude } = city;
+
+    const [state, setState] = useState<WeatherState | null>(null);
 
     useEffect(() => {
         const controller = new AbortController();
 
         async function fetchWeather() {
             try {
-                setLoading(true);
-                setError(null);
-
                 const api =
                     "https://api.open-meteo.com/v1/forecast" +
-                    "?latitude=35.69&longitude=51.42" +
+                    `?latitude=${latitude}&longitude=${longitude}` +
                     "&current=temperature_2m,apparent_temperature,pressure_msl,weather_code,is_day,wind_speed_10m,wind_gusts_10m,wind_direction_10m" +
                     "&hourly=temperature_2m,weather_code,is_day,relative_humidity_2m,dew_point_2m,visibility,precipitation,pressure_msl" +
                     "&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max" +
-                    "&past_days=1&forecast_days=10&timezone=Asia%2FTehran";
+                    "&past_days=1&forecast_days=10&timezone=auto";
 
                 const response = await fetch(api, { signal: controller.signal });
                 if (!response.ok) throw new Error("Failed to fetch weather.");
@@ -267,21 +275,39 @@ export function useWeather() {
                     }))
                     .slice(dayIndex);
 
-                setCurrent(weather);
-                setForecast([...hours, ...events].sort((a, b) => a.time.localeCompare(b.time)));
-                setDaily(days);
+                setState({
+                    key,
+                    current: weather,
+                    forecast: [...hours, ...events].sort((a, b) => a.time.localeCompare(b.time)),
+                    daily: days,
+                    error: null,
+                });
             } catch {
                 if (!controller.signal.aborted) {
-                    setError("Unable to load weather data.");
+                    setState({
+                        key,
+                        current: null,
+                        forecast: EMPTY_FORECAST,
+                        daily: EMPTY_DAILY,
+                        error: "Unable to load weather data.",
+                    });
                 }
-            } finally {
-                if (!controller.signal.aborted) setLoading(false);
             }
         }
 
         void fetchWeather();
-        return () => controller.abort();
-    }, []);
 
-    return { current, forecast, daily, loading, error };
+        return () => controller.abort();
+    }, [key, latitude, longitude]);
+
+    // Data of another city (or none yet) means we are still loading this one.
+    const result = state !== null && state.key === key ? state : null;
+
+    return {
+        current: result?.current ?? null,
+        forecast: result?.forecast ?? EMPTY_FORECAST,
+        daily: result?.daily ?? EMPTY_DAILY,
+        loading: result === null,
+        error: result?.error ?? null,
+    };
 }

@@ -23,17 +23,16 @@ import TemperatureMarker from "@/components/weather/TemperatureMarker";
 import WeatherCard from "@/components/weather/WeatherCard";
 import WindMarker from "@/components/weather/WindMarker";
 import type { CurrentWeather } from "@/hooks/useWeather";
+import type { City } from "@/lib/cities";
 import styles from "./MapCard.module.css";
 
 type MapCardProps = {
+    city: City;
     current: CurrentWeather | null;
     className?: string;
 };
 
 type WeatherLayerType = "wind" | "temperature" | "precipitation";
-
-const CITY_NAME = "Tehran";
-const TEHRAN_CENTER: [number, number] = [51.42, 35.69];
 
 const WEATHER_LAYERS = [
     {
@@ -55,15 +54,16 @@ const WEATHER_LAYERS = [
 
 type LayerMarkerProps = {
     layer: WeatherLayerType;
+    city: City;
     current: CurrentWeather;
 };
 
 // Each weather layer has its own marker.
-function LayerMarker({ layer, current }: LayerMarkerProps) {
+function LayerMarker({ layer, city, current }: LayerMarkerProps) {
     if (layer === "wind") {
         return (
             <WindMarker
-                city={CITY_NAME}
+                city={city.name}
                 speed={current.windSpeed}
                 direction={current.windDirection}
             />
@@ -73,7 +73,7 @@ function LayerMarker({ layer, current }: LayerMarkerProps) {
     if (layer === "precipitation") {
         return (
             <PrecipitationMarker
-                city={CITY_NAME}
+                city={city.name}
                 temperature={current.temperature}
                 weatherCode={current.weatherCode}
                 isDay={current.isDay}
@@ -83,7 +83,7 @@ function LayerMarker({ layer, current }: LayerMarkerProps) {
 
     return (
         <TemperatureMarker
-            city={CITY_NAME}
+            city={city.name}
             temperature={current.temperature}
             low={current.min}
             high={current.max}
@@ -91,10 +91,13 @@ function LayerMarker({ layer, current }: LayerMarkerProps) {
     );
 }
 
-export default function MapCard({ current, className }: MapCardProps) {
+export default function MapCard({ city, current, className }: MapCardProps) {
     const mapContainerRef = useRef<HTMLDivElement | null>(null);
     const mapRef = useRef<Map | null>(null);
+    const markerRef = useRef<Marker | null>(null);
     const activeLayerRef = useRef<string | null>(null);
+    // The map is created once, centered on the city of the first render.
+    const centerRef = useRef<[number, number]>([city.longitude, city.latitude]);
     const [activeLayer, setActiveLayer] =
         useState<WeatherLayerType>("temperature");
     const [menuOpen, setMenuOpen] = useState(false);
@@ -117,7 +120,7 @@ export default function MapCard({ current, className }: MapCardProps) {
         const map = new Map({
             container,
             style: `https://basemaps.cartocdn.com/gl/positron-gl-style/style.json?key=${cartoApiKey}`,
-            center: TEHRAN_CENTER,
+            center: centerRef.current,
             zoom: 5,
             dragRotate: false,
             pitchWithRotate: false,
@@ -135,11 +138,11 @@ export default function MapCard({ current, className }: MapCardProps) {
             const element = document.createElement("div");
             element.className = "size-0";
 
-            new Marker({
+            markerRef.current = new Marker({
                 element,
                 anchor: "center",
             })
-                .setLngLat(TEHRAN_CENTER)
+                .setLngLat(centerRef.current)
                 .addTo(map);
 
             setMarkerElement(element);
@@ -151,10 +154,20 @@ export default function MapCard({ current, className }: MapCardProps) {
 
         return () => {
             mapRef.current = null;
+            markerRef.current = null;
             activeLayerRef.current = null;
             map.remove();
         };
     }, []);
+
+    // Move the map and the marker when another city is selected.
+    useEffect(() => {
+        const center: [number, number] = [city.longitude, city.latitude];
+
+        centerRef.current = center;
+        markerRef.current?.setLngLat(center);
+        mapRef.current?.flyTo({ center, essential: true });
+    }, [city.longitude, city.latitude]);
 
     useEffect(() => {
         const map = mapRef.current;
@@ -197,8 +210,10 @@ export default function MapCard({ current, className }: MapCardProps) {
                     color: [126, 220, 255, 230],
                     fastColor: [177, 237, 255, 245],
                     smooth: true,
-                    density: 50,
-   
+                    density: 2,
+                    maxAmount: 128,
+                    speed: 0.0006,
+                    fadeFactor: 0.1,
                 });
             } else if (activeLayer === "temperature") {
                 nextLayer = new TemperatureLayer({
@@ -306,13 +321,17 @@ export default function MapCard({ current, className }: MapCardProps) {
             <div
                 ref={mapContainerRef}
                 className={`min-h-0 w-full flex-1 overflow-hidden rounded-xl ${styles.map}`}
-                aria-label={`Weather map showing ${selectedLayer.label}`}
+                aria-label={`Weather map of ${city.name} showing ${selectedLayer.label}`}
             />
 
             {markerElement &&
                 current &&
                 createPortal(
-                    <LayerMarker layer={activeLayer} current={current} />,
+                    <LayerMarker
+                        layer={activeLayer}
+                        city={city}
+                        current={current}
+                    />,
                     markerElement,
                 )}
         </WeatherCard>
