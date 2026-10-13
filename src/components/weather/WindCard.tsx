@@ -1,5 +1,6 @@
 import WeatherCard from "@/components/weather/WeatherCard";
 import type { CurrentWeather } from "@/hooks/useWeather";
+import { WIDE_TEXT } from "@/lib/cardText";
 
 const DIRECTIONS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 
@@ -9,8 +10,24 @@ const TICKS = Array.from({ length: 90 }, (_, i) => i * 4).filter((angle) => {
     return offset >= 9 && offset <= 81;
 });
 
+const CARDINALS = [
+    { label: "N", angle: 0, x: 62, y: 16 },
+    { label: "E", angle: 90, x: 108, y: 62 },
+    { label: "S", angle: 180, x: 62, y: 108 },
+    { label: "W", angle: 270, x: 16, y: 62 },
+];
+
+// A cardinal letter fades out when the arrow or the dot passes within this angle (degrees).
+const LETTER_CLEARANCE = 18;
+
 function directionName(degrees: number): string {
     return DIRECTIONS[Math.round(degrees / 45) % 8];
+}
+
+function angularDistance(a: number, b: number): number {
+    const difference = Math.abs(a - b) % 360;
+
+    return difference > 180 ? 360 - difference : difference;
 }
 
 type CompassProps = {
@@ -25,11 +42,9 @@ function Compass({ speed, direction }: CompassProps) {
     return (
         <svg
             viewBox="0 0 124 124"
-            width={124}
-            height={124}
             role="img"
             aria-label={`Wind from ${directionName(direction)} at ${Math.round(speed)} kilometers per hour`}
-            className="shrink-0 text-white"
+            className="block h-auto w-full text-white"
         >
             <g stroke="currentColor" strokeOpacity={0.3} strokeWidth={1}>
                 {TICKS.map((angle) => (
@@ -46,16 +61,27 @@ function Compass({ speed, direction }: CompassProps) {
 
             <g
                 fill="currentColor"
-                fillOpacity={0.85}
                 fontSize={11}
                 fontWeight={600}
                 textAnchor="middle"
                 dominantBaseline="central"
             >
-                <text x={62} y={16}>N</text>
-                <text x={108} y={62}>E</text>
-                <text x={62} y={108}>S</text>
-                <text x={16} y={62}>W</text>
+                {CARDINALS.map(({ label, angle, x, y }) => {
+                    const covered =
+                        angularDistance(angle, heading) < LETTER_CLEARANCE ||
+                        angularDistance(angle, direction) < LETTER_CLEARANCE;
+
+                    return (
+                        <text
+                            key={label}
+                            x={x}
+                            y={y}
+                            fillOpacity={covered ? 0 : 0.85}
+                        >
+                            {label}
+                        </text>
+                    );
+                })}
             </g>
 
             <text
@@ -163,8 +189,8 @@ export default function WindCard({
             )}
 
             {!loading && !error && current && (
-                <div className="grid h-full grid-cols-[minmax(0,1fr)_124px] gap-x-3">
-                    <dl className="flex h-full flex-col text-xs">
+                <div className="grid h-full grid-cols-[minmax(0,1fr)_40cqw] gap-x-[4.3cqw]">
+                    <dl className={`flex h-full flex-col ${WIDE_TEXT}`}>
                         {rows.map((row, index) => (
                             <div
                                 key={row.label}
@@ -180,7 +206,7 @@ export default function WindCard({
                         ))}
                     </dl>
 
-                    <div className="-mt-2 self-start">
+                    <div className="mt-[-2.8cqw] self-start">
                         <Compass
                             speed={current.windSpeed}
                             direction={current.windDirection}

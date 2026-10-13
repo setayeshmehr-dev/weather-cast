@@ -1,5 +1,6 @@
 import WeatherCard from "@/components/weather/WeatherCard";
 import type { AirQuality } from "@/hooks/useAirQuality";
+import { WIDE_TEXT, WIDE_VALUE } from "@/lib/cardText";
 
 const GAUGE_GRADIENT =
     "linear-gradient(to right, #3a8ff0 0%, #4cd964 22%, #c6e04a 45%, #f5c042 55%, #f08a3c 68%, #e63e50 82%, #8c1d2e 100%)";
@@ -50,21 +51,21 @@ export default function AirQualityCard({
 
             {!loading && !error && airQuality && (
                 <>
-                    <p className="text-xl leading-tight font-semibold">
+                    <p className={`font-semibold ${WIDE_VALUE}`}>
                         {airQuality.label}
                     </p>
 
                     <div
-                        className="relative h-1 rounded-full"
+                        className="relative h-[max(4px,1.4cqw)] rounded-full"
                         style={{ backgroundImage: GAUGE_GRADIENT }}
                     >
                         <span
-                            className="absolute top-1/2 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white ring-2 ring-black/40"
+                            className="absolute top-1/2 size-[max(6px,2.2cqw)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white ring-2 ring-black/40"
                             style={{ left: `${position}%` }}
                         />
                     </div>
 
-                    <p className="text-xs leading-snug">
+                    <p className={WIDE_TEXT}>
                         {airQuality.trend
                             ? TREND_TEXT[airQuality.trend]
                             : "Comparison with yesterday is not available."}
