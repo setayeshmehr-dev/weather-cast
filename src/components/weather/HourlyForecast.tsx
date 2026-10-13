@@ -1,3 +1,4 @@
+
 "use client";
 
 import WeatherCard from "@/components/weather/WeatherCard";
@@ -23,10 +24,7 @@ export default function HourlyForecast({
     error,
 }: HourlyForecastProps) {
     return (
-        <WeatherCard
-            title="HOURLY FORECAST"
-            divided
-        >
+        <WeatherCard title="HOURLY FORECAST" divided>
             {loading && (
                 <p className="py-4 text-sm text-white/70">
                     Loading forecast...
@@ -34,10 +32,7 @@ export default function HourlyForecast({
             )}
 
             {error && (
-                <p
-                    role="alert"
-                    className="py-4 text-sm text-white/80"
-                >
+                <p role="alert" className="py-4 text-sm text-white/80">
                     {error}
                 </p>
             )}
@@ -86,10 +81,7 @@ export default function HourlyForecast({
                                     {formatTime(item.time)}
                                 </span>
 
-                                <WeatherIcon
-                                    slug={slug}
-                                    label={label}
-                                />
+                                <WeatherIcon slug={slug} label={label} />
 
                                 <span className="text-lg font-medium">
                                     {isHour
