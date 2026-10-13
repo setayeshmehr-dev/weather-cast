@@ -25,6 +25,11 @@ type PressureGaugeProps = {
     trend: PressureTrend;
 };
 
+/*
+ * The drawing is 100x100 and scales to the whole card body (plus the gap under
+ * the title), so it keeps its proportions in every card size.
+ * The ticks sit on r=37..47; the needle is a thicker tick on the same ring.
+ */
 function PressureGauge({ pressure, trend }: PressureGaugeProps) {
     const ratio = Math.min(
         Math.max((pressure - PRESSURE_MIN) / (PRESSURE_MAX - PRESSURE_MIN), 0),
@@ -35,11 +40,9 @@ function PressureGauge({ pressure, trend }: PressureGaugeProps) {
     return (
         <svg
             viewBox="0 0 100 100"
-            width={100}
-            height={100}
             role="img"
             aria-label={`Pressure ${Math.round(pressure)} hectopascals, ${trend}`}
-            className="absolute -top-3.5 left-1/2 -translate-x-1/2 text-white"
+            className="absolute inset-x-0 -top-3 h-[calc(100%+0.75rem)] w-full text-white"
         >
             <g stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
                 {TICK_ANGLES.map((angle) => (
@@ -49,7 +52,7 @@ function PressureGauge({ pressure, trend }: PressureGaugeProps) {
                         y1={3}
                         x2={50}
                         y2={13}
-                        strokeOpacity={angle <= needleAngle ? 0.55 : 0.22}
+                        strokeOpacity={angle <= needleAngle ? 0.6 : 0.22}
                         transform={`rotate(${angle} 50 50)`}
                     />
                 ))}
@@ -57,11 +60,11 @@ function PressureGauge({ pressure, trend }: PressureGaugeProps) {
 
             <line
                 x1={50}
-                y1={12}
+                y1={2}
                 x2={50}
-                y2={28}
+                y2={19}
                 stroke="currentColor"
-                strokeWidth={3}
+                strokeWidth={3.2}
                 strokeLinecap="round"
                 transform={`rotate(${needleAngle} 50 50)`}
             />
@@ -71,14 +74,21 @@ function PressureGauge({ pressure, trend }: PressureGaugeProps) {
                 textAnchor="middle"
                 dominantBaseline="central"
             >
-                <text x={50} y={41} fontSize={14} fontWeight={600} fillOpacity={0.85}>
+                <text x={50} y={41} fontSize={13} fontWeight={600} fillOpacity={0.85}>
                     {TREND_SYMBOL[trend]}
                 </text>
-                <text x={50} y={57} fontSize={16} fontWeight={600}>
+                <text x={50} y={56} fontSize={17} fontWeight={600}>
                     {Math.round(pressure)}
                 </text>
-                <text x={50} y={72} fontSize={11} fillOpacity={0.8}>
+                <text x={50} y={70} fontSize={10.5} fillOpacity={0.8}>
                     hPa
+                </text>
+
+                <text x={23} y={94.5} fontSize={11}>
+                    Low
+                </text>
+                <text x={77} y={94.5} fontSize={11}>
+                    High
                 </text>
             </g>
         </svg>
@@ -120,17 +130,10 @@ export default function PressureCard({
             )}
 
             {!loading && !error && current && (
-                <>
-                    <PressureGauge
-                        pressure={current.pressure}
-                        trend={current.pressureTrend}
-                    />
-
-                    <div className="absolute inset-x-0 bottom-0 flex justify-between px-5 text-xs">
-                        <span>Low</span>
-                        <span>High</span>
-                    </div>
-                </>
+                <PressureGauge
+                    pressure={current.pressure}
+                    trend={current.pressureTrend}
+                />
             )}
         </WeatherCard>
     );
