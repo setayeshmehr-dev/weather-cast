@@ -1,4 +1,5 @@
 import WeatherCard from "@/components/weather/WeatherCard";
+import { CARD_LABEL, CARD_SMALL, CARD_VALUE } from "@/lib/cardText";
 
 type AveragesCardProps = {
     today: number | null;
@@ -49,16 +50,16 @@ export default function AveragesCard({
             {!loading && !error && ready && (
                 <>
                     <div>
-                        <p className="text-[28px] leading-none">
+                        <p className={CARD_VALUE}>
                             {sign}
                             {difference}°
                         </p>
-                        <p className="mt-1 text-xs leading-tight font-semibold">
+                        <p className={`mt-[3cqw] font-semibold ${CARD_LABEL}`}>
                             {describe(difference)}
                         </p>
                     </div>
 
-                    <dl className="text-xs leading-tight">
+                    <dl className={CARD_SMALL}>
                         <div className="flex justify-between">
                             <dt className="text-white/50">Today</dt>
                             <dd className="font-semibold">
