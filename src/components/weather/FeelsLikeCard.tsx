@@ -1,22 +1,24 @@
 import WeatherCard from "@/components/weather/WeatherCard";
 import type { CurrentWeather } from "@/hooks/useWeather";
+import { CARD_LABEL, CARD_TEXT, CARD_VALUE } from "@/lib/cardText";
 
 // Heuristics for the explanation text (the API does not say why it feels different).
 const WIND_THRESHOLD = 10; // km/h
 const HUMIDITY_THRESHOLD = 60; // %
 
+// Short texts: they must fit in two lines of a 144px card.
 function describe(difference: number, current: CurrentWeather): string {
     if (difference <= -1) {
         return current.windSpeed >= WIND_THRESHOLD
             ? "Wind is making it feel cooler."
-            : "It feels cooler than the actual temperature.";
+            : "It feels cooler than actual.";
     }
 
     if (difference >= 1) {
         return current.relativeHumidity !== null &&
             current.relativeHumidity >= HUMIDITY_THRESHOLD
             ? "Humidity is making it feel warmer."
-            : "It feels warmer than the actual temperature.";
+            : "It feels warmer than actual.";
     }
 
     return "Similar to the actual temperature.";
@@ -71,21 +73,21 @@ export default function FeelsLikeCard({
             {!loading && !error && current && (
                 <>
                     <div>
-                        <p className="text-[28px] leading-none">
-                            {feelsLike}°
-                        </p>
-                        <p className="mt-1 text-xs font-semibold text-white/80">
+                        <p className={CARD_VALUE}>{feelsLike}°</p>
+                        <p
+                            className={`mt-[3cqw] font-semibold text-white/80 ${CARD_LABEL}`}
+                        >
                             Actual: {actual}°
                         </p>
                     </div>
 
-                    <div className="relative h-3.5">
-                        <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-black/25" />
+                    <div className="relative h-[11.5cqw]">
+                        <div className="absolute inset-x-0 top-1/2 h-[3.3cqw] -translate-y-1/2 rounded-full bg-black/25" />
 
                         {difference !== 0 && (
                             <>
                                 <div
-                                    className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-[#6fcfc8]"
+                                    className="absolute top-1/2 h-[4.9cqw] -translate-y-1/2 rounded-full bg-[#6fcfc8]"
                                     style={{
                                         left: `${Math.min(pillPosition, tickPosition)}%`,
                                         width: `${Math.abs(pillPosition - tickPosition)}%`,
@@ -93,7 +95,7 @@ export default function FeelsLikeCard({
                                 />
 
                                 <div
-                                    className="absolute top-1/2 flex h-3.5 -translate-x-1/2 -translate-y-1/2 items-center rounded-full bg-[#6fcfc8] px-1.5 text-[10px] leading-none font-bold text-white"
+                                    className="absolute top-1/2 flex h-[11.5cqw] -translate-x-1/2 -translate-y-1/2 items-center rounded-full bg-[#6fcfc8] px-[4.9cqw] text-[clamp(10px,8.2cqw,14px)] leading-none font-bold text-white"
                                     style={{ left: `${pillPosition}%` }}
                                 >
                                     {difference < 0 ? "↓" : "↑"}
@@ -103,12 +105,12 @@ export default function FeelsLikeCard({
                         )}
 
                         <div
-                            className="absolute top-1/2 h-2.5 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white"
+                            className="absolute top-1/2 h-[8.2cqw] w-[1.7cqw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white"
                             style={{ left: `${tickPosition}%` }}
                         />
                     </div>
 
-                    <p className="text-xs leading-tight">
+                    <p className={CARD_TEXT}>
                         {describe(difference, current)}
                     </p>
                 </>
