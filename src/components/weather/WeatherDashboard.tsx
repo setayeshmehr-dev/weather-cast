@@ -185,7 +185,12 @@ export default function WeatherDashboard({ city }: WeatherDashboardProps) {
                             className={moonClassName}
                         />
 
-                        <UVIndexCard className={uvIndexClassName} />
+                        <UVIndexCard
+                            current={current}
+                            loading={loading}
+                            error={error}
+                            className={uvIndexClassName}
+                        />
 
                         <SunriseCard
                             current={current}

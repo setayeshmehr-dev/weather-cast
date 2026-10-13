@@ -8,14 +8,15 @@ import type {
     ForecastItem,
     SunEvent,
 } from "@/hooks/useWeather";
+import { CARD_VALUE } from "@/lib/cardText";
 
 const MINUTES_PER_DAY = 1440;
 
-// Size of the curve drawing (the card is 144px wide on desktop).
+// Size of the curve drawing; it scales to the width of the card.
 const WIDTH = 144;
-const HEIGHT = 44;
-const HORIZON_Y = 22;
-const MAX_UNIT = 18;
+const HEIGHT = 56;
+const HORIZON_Y = 30;
+const MAX_UNIT = 20;
 
 // The curve is sampled every 15 minutes.
 const SAMPLE_STEP = 15;
@@ -73,18 +74,25 @@ type SunCurveProps = {
  * The curve is a cosine that crosses the horizon exactly at sunrise and sunset
  * and peaks at solar noon. It is an approximation of the sun's altitude, not
  * real astronomical data.
+ * The SVG does not clip (overflow-visible): only the edge of the card does, so
+ * the sun and its glow are never cut by the drawing itself.
  */
 function SunCurve({ sunrise, sunset, now }: SunCurveProps) {
     const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
     const aboveId = `${id}-above`;
     const belowId = `${id}-below`;
     const glowId = `${id}-glow`;
+    const dayId = `${id}-day`;
+    const blurId = `${id}-blur`;
 
     const noon = (sunrise + sunset) / 2;
     const halfDay = (sunset - sunrise) / 2;
     const omega = (2 * Math.PI) / MINUTES_PER_DAY;
     const offset = Math.cos(omega * halfDay);
-    const unit = Math.min(MAX_UNIT, (HORIZON_Y - 2) / (1 + Math.abs(offset)));
+    const unit = Math.min(
+        MAX_UNIT,
+        (HEIGHT - HORIZON_Y - 3) / (1 + Math.abs(offset))
+    );
 
     const pointAt = (minute: number) => {
         const altitude = Math.cos(omega * (minute - noon)) - offset;
@@ -106,39 +114,58 @@ function SunCurve({ sunrise, sunset, now }: SunCurveProps) {
     ).join(" ");
 
     const sun = pointAt(now);
-    const glowOpacity = sun.altitude > -0.15 ? 0.9 : 0.25;
+    const glowOpacity = sun.altitude > -0.15 ? 0.95 : 0.3;
 
     return (
         <svg
             viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-            className="block w-full"
+            className="block w-full overflow-visible"
             role="img"
             aria-label="Sun position during the day"
         >
             <defs>
                 <clipPath id={aboveId}>
-                    <rect x={0} y={0} width={WIDTH} height={HORIZON_Y} />
+                    <rect x={-20} y={-20} width={WIDTH + 40} height={HORIZON_Y + 20} />
                 </clipPath>
 
                 <clipPath id={belowId}>
                     <rect
-                        x={0}
+                        x={-20}
                         y={HORIZON_Y}
-                        width={WIDTH}
-                        height={HEIGHT - HORIZON_Y}
+                        width={WIDTH + 40}
+                        height={HEIGHT - HORIZON_Y + 20}
                     />
                 </clipPath>
 
                 <radialGradient id={glowId}>
                     <stop offset="0%" stopColor="#ffffff" stopOpacity={0.9} />
+                    <stop offset="45%" stopColor="#ffffff" stopOpacity={0.35} />
                     <stop offset="100%" stopColor="#ffffff" stopOpacity={0} />
                 </radialGradient>
+
+                {/* The day line is brightest next to the sun. */}
+                <linearGradient
+                    id={dayId}
+                    gradientUnits="userSpaceOnUse"
+                    x1={sun.x - 45}
+                    y1={0}
+                    x2={sun.x + 45}
+                    y2={0}
+                >
+                    <stop offset="0%" stopColor="#ffffff" stopOpacity={0.3} />
+                    <stop offset="50%" stopColor="#ffffff" stopOpacity={0.95} />
+                    <stop offset="100%" stopColor="#ffffff" stopOpacity={0.3} />
+                </linearGradient>
+
+                <filter id={blurId} x="-10%" y="-60%" width="120%" height="220%">
+                    <feGaussianBlur stdDeviation={2} />
+                </filter>
             </defs>
 
             <circle
                 cx={sun.x}
                 cy={sun.y}
-                r={16}
+                r={24}
                 fill={`url(#${glowId})`}
                 opacity={glowOpacity}
             />
@@ -146,9 +173,20 @@ function SunCurve({ sunrise, sunset, now }: SunCurveProps) {
             <path
                 d={path}
                 fill="none"
+                stroke="#ffffff"
+                strokeOpacity={0.35}
+                strokeWidth={5}
+                strokeLinecap="round"
+                filter={`url(#${blurId})`}
+                clipPath={`url(#${aboveId})`}
+            />
+
+            <path
+                d={path}
+                fill="none"
                 stroke="#000000"
                 strokeOpacity={0.28}
-                strokeWidth={2.5}
+                strokeWidth={2.6}
                 strokeLinecap="round"
                 clipPath={`url(#${belowId})`}
             />
@@ -156,9 +194,8 @@ function SunCurve({ sunrise, sunset, now }: SunCurveProps) {
             <path
                 d={path}
                 fill="none"
-                stroke="#ffffff"
-                strokeOpacity={0.55}
-                strokeWidth={2.5}
+                stroke={`url(#${dayId})`}
+                strokeWidth={2.6}
                 strokeLinecap="round"
                 clipPath={`url(#${aboveId})`}
             />
@@ -170,7 +207,7 @@ function SunCurve({ sunrise, sunset, now }: SunCurveProps) {
                 y2={HORIZON_Y}
                 stroke="#ffffff"
                 strokeOpacity={0.85}
-                strokeWidth={1}
+                strokeWidth={1.2}
             />
 
             <circle cx={sun.x} cy={sun.y} r={5} fill="#1d2133" />
@@ -186,7 +223,7 @@ function SunCurve({ sunrise, sunset, now }: SunCurveProps) {
             <circle
                 cx={sun.x}
                 cy={sun.y}
-                r={5.5}
+                r={5.6}
                 fill="none"
                 stroke="#000000"
                 strokeOpacity={0.3}
@@ -241,23 +278,18 @@ export default function SunriseCard({
 
             {!loading && !error && ready && (
                 <>
-                    <p className="text-[28px] leading-none">
+                    <p className={CARD_VALUE}>
                         {formatTime(isNight ? sunrise.time : sunset.time)}
                     </p>
 
-                    <div className="-mx-3 @min-[624px]:-mx-2.5">
+                    {/* Above the text, bleeding to the sides and bottom of the card. */}
+                    <div className="pointer-events-none relative z-10 -mx-(--card-pad) -mb-(--card-pad)">
                         <SunCurve
                             sunrise={minutesOfDay(sunrise.time)}
                             sunset={minutesOfDay(sunset.time)}
                             now={minutesOfDay(current.time)}
                         />
                     </div>
-
-                    <p className="text-xs font-medium">
-                        {isNight
-                            ? `Sunset: ${formatTime(sunset.time)}`
-                            : `Sunrise: ${formatTime(sunrise.time)}`}
-                    </p>
                 </>
             )}
         </WeatherCard>

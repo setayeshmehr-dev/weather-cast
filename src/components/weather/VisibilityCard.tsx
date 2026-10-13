@@ -1,6 +1,6 @@
-
 import WeatherCard from "@/components/weather/WeatherCard";
 import type { CurrentWeather } from "@/hooks/useWeather";
+import { CARD_TEXT, CARD_VALUE } from "@/lib/cardText";
 
 type VisibilityCardProps = {
     current: CurrentWeather | null;
@@ -9,11 +9,15 @@ type VisibilityCardProps = {
     className?: string;
 };
 
-function getVisibilityDescription(miles: number): string {
-    if (miles >= 10) return "Perfectly clear view.";
-    if (miles >= 5) return "Good visibility.";
-    if (miles >= 2) return "Visibility is reduced.";
+function getVisibilityDescription(km: number): string {
+    if (km >= 16) return "Perfectly clear view.";
+    if (km >= 8) return "Good visibility.";
+    if (km >= 3) return "Visibility is reduced.";
     return "Visibility is very limited.";
+}
+
+function formatKm(km: number): string {
+    return km < 10 ? km.toFixed(1) : String(Math.round(km));
 }
 
 export default function VisibilityCard({
@@ -29,13 +33,14 @@ export default function VisibilityCard({
         Number.isFinite(visibility) &&
         visibility >= 0;
 
-    const miles = validVisibility ? visibility / 1609.344 : null;
+    // Open-Meteo returns the visibility in meters.
+    const km = validVisibility ? visibility / 1000 : null;
 
     return (
         <WeatherCard
             title="VISIBILITY"
             className={className}
-            bodyClassName="flex flex-1 flex-col justify-between"
+            bodyClassName="flex flex-col justify-between"
         >
             {loading && (
                 <p className="text-xs text-white/70">Loading visibility...</p>
@@ -49,14 +54,23 @@ export default function VisibilityCard({
 
             {!loading && !error && current && (
                 <>
-                    <p className="text-[25px]! leading-tight font-normal tracking-tight">
-                        {miles === null ? "—" : `${Math.round(miles)} mi`}
+                    <p className={CARD_VALUE}>
+                        {km === null ? (
+                            "—"
+                        ) : (
+                            <>
+                                {formatKm(km)}
+                                <span className="ml-[0.2em] text-[0.57em] text-white/80">
+                                    km
+                                </span>
+                            </>
+                        )}
                     </p>
 
-                    <p className="text-[12px]! leading-relaxed text-white/90 sm:text-sm">
-                        {miles === null
+                    <p className={CARD_TEXT}>
+                        {km === null
                             ? "Visibility data is unavailable."
-                            : getVisibilityDescription(miles)}
+                            : getVisibilityDescription(km)}
                     </p>
                 </>
             )}

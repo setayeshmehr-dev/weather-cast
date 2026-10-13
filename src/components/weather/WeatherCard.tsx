@@ -24,7 +24,7 @@ export default function WeatherCard({
     return (
         <section
             aria-label={typeof title === "string" ? title : "Weather card"}
-            className={`flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[18px] border border-white/20 bg-black/10 p-3 text-white backdrop-blur-lg @min-[624px]:p-2.5 ${className}`}
+            className={`flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[18px] border border-white/20 bg-black/10 p-(--card-pad) text-white backdrop-blur-lg [--card-pad:12px] @min-[624px]:[--card-pad:10px] ${className}`}
         >
             <h2
                 className={`flex shrink-0 items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-white/60 ${
@@ -35,7 +35,7 @@ export default function WeatherCard({
                 {title}
             </h2>
 
-            <div className={`min-h-0 flex-1 ${bodySpacing} ${bodyClassName}`}>
+            <div className={`@container min-h-0 flex-1 ${bodySpacing} ${bodyClassName}`}>
                 {children}
             </div>
         </section>
