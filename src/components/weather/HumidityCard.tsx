@@ -1,6 +1,6 @@
-
 import WeatherCard from "@/components/weather/WeatherCard";
 import type { CurrentWeather } from "@/hooks/useWeather";
+import { CARD_TEXT, CARD_VALUE } from "@/lib/cardText";
 
 type HumidityCardProps = {
     current: CurrentWeather | null;
@@ -24,15 +24,11 @@ export default function HumidityCard({
     const validDewPoint =
         typeof dewPoint === "number" && Number.isFinite(dewPoint);
 
-    const dewPointF = validDewPoint
-        ? Math.round((dewPoint * 9) / 5 + 32)
-        : null;
-
     return (
         <WeatherCard
             title="HUMIDITY"
             className={className}
-            bodyClassName="flex flex-1 flex-col justify-between"
+            bodyClassName="flex flex-col justify-between"
         >
             {loading && (
                 <p className="text-xs text-white/70">Loading humidity...</p>
@@ -46,14 +42,14 @@ export default function HumidityCard({
 
             {!loading && !error && current && (
                 <>
-                    <p className="text-[25px]! leading-tight font-normal tracking-tight">
+                    <p className={CARD_VALUE}>
                         {validHumidity ? `${Math.round(humidity)}%` : "—"}
                     </p>
 
-                    <p className="text-[12px]! leading-relaxed text-white/90 sm:text-sm">
-                        {dewPointF === null
-                            ? "Dew point data is unavailable."
-                            : `The dew point is ${dewPointF}° right now.`}
+                    <p className={CARD_TEXT}>
+                        {validDewPoint
+                            ? `The dew point is ${Math.round(dewPoint)}° right now.`
+                            : "Dew point data is unavailable."}
                     </p>
                 </>
             )}
