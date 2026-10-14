@@ -42,7 +42,7 @@ function PressureGauge({ pressure, trend }: PressureGaugeProps) {
             viewBox="0 0 100 100"
             role="img"
             aria-label={`Pressure ${Math.round(pressure)} hectopascals, ${trend}`}
-            className="absolute inset-x-0 -top-3 h-[calc(100%+0.75rem)] w-full text-white"
+            className="absolute inset-x-0 -top-2 h-[calc(100%+0.75rem)] w-full text-white"
         >
             <g stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
                 {TICK_ANGLES.map((angle) => (
@@ -62,7 +62,7 @@ function PressureGauge({ pressure, trend }: PressureGaugeProps) {
                 x1={50}
                 y1={2}
                 x2={50}
-                y2={19}
+                y2={14}
                 stroke="currentColor"
                 strokeWidth={3.2}
                 strokeLinecap="round"
@@ -74,7 +74,7 @@ function PressureGauge({ pressure, trend }: PressureGaugeProps) {
                 textAnchor="middle"
                 dominantBaseline="central"
             >
-                <text x={50} y={41} fontSize={13} fontWeight={600} fillOpacity={0.85}>
+                <text x={50} y={31} fontSize={23} fontWeight={24} fillOpacity={1}>
                     {TREND_SYMBOL[trend]}
                 </text>
                 <text x={50} y={56} fontSize={17} fontWeight={600}>
