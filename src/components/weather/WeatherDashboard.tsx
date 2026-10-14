@@ -245,22 +245,6 @@ export default function WeatherDashboard({ city }: WeatherDashboardProps) {
                         />
                     </section>
 
-                    <footer className="mt-6 text-center text-xs text-white/60">
-                        <p>
-                            Weather data by{" "}
-                            <a
-                                href="https://open-meteo.com/"
-                                target="_blank"
-                                rel="noreferrer"
-                                className="underline"
-                            >
-                                Open-Meteo.com
-                            </a>
-                        </p>
-                        <p>Air quality data: CAMS ENSEMBLE via Open-Meteo</p>
-                        <p>Climate averages: ERA5 reanalysis via Open-Meteo</p>
-                        <p>Location search: GeoNames via Open-Meteo</p>
-                    </footer>
                 </div>
             </main>
         </>

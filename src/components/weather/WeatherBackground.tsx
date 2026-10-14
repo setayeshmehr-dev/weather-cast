@@ -24,7 +24,7 @@ const weatherOptions = [
 ];
 
 function getTestVideoName(weather: string, period: "day" | "night"): string {
-    if (weather === "fog") return `overcast-${period}`;
+    if (weather === "fog") return `overcast-day`;
     if (weather === "rain") return "rain";
     if (weather === "thunderstorm") return "thunderstorm";
 
