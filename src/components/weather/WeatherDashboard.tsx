@@ -15,6 +15,10 @@ import UVIndexCard from "@/components/weather/UVIndexCard";
 import VisibilityCard from "@/components/weather/VisibilityCard";
 import WindCard from "@/components/weather/WindCard";
 import { useAirQuality } from "@/hooks/useAirQuality";
+import {
+    WeatherIconProvider,
+    WeatherIconStyleToggle,
+} from "@/components/weather/WeatherIcon";
 import { useClimateAverage } from "@/hooks/useClimateAverage";
 import { useWeather } from "@/hooks/useWeather";
 import type { City } from "@/lib/cities";
@@ -88,7 +92,7 @@ export default function WeatherDashboard({ city }: WeatherDashboardProps) {
     } = useClimateAverage(daily[0]?.date ?? null, city);
 
     return (
-        <>
+        <WeatherIconProvider>
 
             <WeatherBackground
                 weatherCode={current?.weatherCode ?? null}
@@ -247,6 +251,7 @@ export default function WeatherDashboard({ city }: WeatherDashboardProps) {
 
                 </div>
             </main>
-        </>
+            <WeatherIconStyleToggle />
+        </WeatherIconProvider>
     );
 }
