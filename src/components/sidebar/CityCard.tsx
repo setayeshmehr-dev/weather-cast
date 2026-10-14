@@ -2,9 +2,11 @@
 
 import { X } from "@phosphor-icons/react";
 
+import WeatherVideo from "@/components/weather/WeatherVideo";
 import type { CitySummary } from "@/hooks/useCitySummaries";
 import type { City } from "@/lib/cities";
 import { getWeatherBackground } from "@/lib/weatherBackground";
+import { getWeatherVideoName } from "@/lib/weatherVideo";
 
 const PLACEHOLDER_BACKGROUND =
     "linear-gradient(160deg, #3b4a63 0%, #566580 100%)";
@@ -15,6 +17,14 @@ function localTime(summary: CitySummary, now: number | null): string {
     return new Date(now + summary.utcOffsetSeconds * 1000)
         .toISOString()
         .slice(11, 16);
+}
+
+function Bone({ className }: { className: string }) {
+    return (
+        <span
+            className={`block animate-pulse rounded-md bg-white/25 ${className}`}
+        />
+    );
 }
 
 type CityCardProps = {
@@ -42,7 +52,7 @@ export default function CityCard({
                 type="button"
                 onClick={onSelect}
                 aria-current={selected ? "true" : undefined}
-                className={`flex h-24 w-full flex-col justify-between rounded-2xl p-3 text-left text-white ${
+                className={`relative flex h-24 w-full flex-col justify-between overflow-hidden rounded-2xl p-3 text-left text-white ${
                     selected ? "ring-2 ring-white/70" : ""
                 }`}
                 style={{
@@ -51,28 +61,58 @@ export default function CityCard({
                         : PLACEHOLDER_BACKGROUND,
                 }}
             >
-                <div className="flex items-start justify-between gap-2">
+                {summary && (
+                    <WeatherVideo
+                        name={getWeatherVideoName(
+                            summary.weatherCode,
+                            summary.isDay,
+                        )}
+                        variant="card"
+                        className="absolute inset-0"
+                    />
+                )}
+
+                {/* Keeps the text readable on top of the video. */}
+                <span className="absolute inset-0 bg-black/20" />
+
+                <div className="relative flex items-start justify-between gap-2">
                     <div className="min-w-0">
                         <p className="truncate text-lg leading-tight font-semibold">
                             {city.name}
                         </p>
-                        <p className="text-xs text-white/80">
-                            {summary ? localTime(summary, now) : "\u00a0"}
-                        </p>
+
+                        {summary ? (
+                            <p className="text-xs text-white/80">
+                                {localTime(summary, now)}
+                            </p>
+                        ) : (
+                            <Bone className="mt-1.5 h-3 w-10" />
+                        )}
                     </div>
 
-                    <p className="text-4xl leading-none font-light">
-                        {summary ? `${Math.round(summary.temperature)}°` : "--°"}
-                    </p>
+                    {summary ? (
+                        <p className="text-4xl leading-none font-light">
+                            {Math.round(summary.temperature)}°
+                        </p>
+                    ) : (
+                        <Bone className="h-9 w-14 rounded-lg" />
+                    )}
                 </div>
 
-                <div className="flex items-end justify-between gap-2 text-xs">
-                    <span className="truncate">{summary?.condition ?? ""}</span>
-                    <span className="shrink-0">
-                        {summary
-                            ? `H:${Math.round(summary.max)}° L:${Math.round(summary.min)}°`
-                            : ""}
-                    </span>
+                <div className="relative flex items-end justify-between gap-2 text-xs">
+                    {summary ? (
+                        <>
+                            <span className="truncate">{summary.condition}</span>
+                            <span className="shrink-0">
+                                {`H:${Math.round(summary.max)}° L:${Math.round(summary.min)}°`}
+                            </span>
+                        </>
+                    ) : (
+                        <>
+                            <Bone className="h-3 w-16" />
+                            <Bone className="h-3 w-20" />
+                        </>
+                    )}
                 </div>
             </button>
 
@@ -81,7 +121,7 @@ export default function CityCard({
                     type="button"
                     onClick={onRemove}
                     aria-label={`Remove ${city.name}`}
-                    className="absolute -top-1.5 -left-1.5 hidden size-5 items-center justify-center rounded-full bg-black/60 text-white group-focus-within:flex group-hover:flex hover:bg-black/80"
+                    className="absolute -top-1.5 -left-1.5 z-10 hidden size-5 items-center justify-center rounded-full bg-black/60 text-white group-focus-within:flex group-hover:flex hover:bg-black/80"
                 >
                     <X size={11} weight="bold" />
                 </button>

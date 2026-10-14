@@ -51,6 +51,7 @@ export type CurrentWeather = {
     dewPoint: number | null;
     visibility: number | null;
     uvIndex: number | null;
+    cloudCover: number | null;
 };
 
 type OpenMeteoResponse = {
@@ -66,6 +67,7 @@ type OpenMeteoResponse = {
         wind_gusts_10m: number;
         wind_direction_10m: number;
         uv_index: number | null;
+        cloud_cover: number | null;
     };
     hourly: {
         time: string[];
@@ -149,7 +151,7 @@ export function useWeather(city: City) {
                 const api =
                     "https://api.open-meteo.com/v1/forecast" +
                     `?latitude=${latitude}&longitude=${longitude}` +
-                    "&current=temperature_2m,apparent_temperature,pressure_msl,weather_code,is_day,wind_speed_10m,wind_gusts_10m,wind_direction_10m,uv_index" +
+                    "&current=temperature_2m,apparent_temperature,pressure_msl,weather_code,is_day,wind_speed_10m,wind_gusts_10m,wind_direction_10m,uv_index,cloud_cover" +
                     "&hourly=temperature_2m,weather_code,is_day,relative_humidity_2m,dew_point_2m,visibility,precipitation,pressure_msl" +
                     "&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max" +
                     "&past_days=1&forecast_days=10&timezone=auto";
@@ -233,6 +235,7 @@ export function useWeather(city: City) {
                     dewPoint: data.hourly.dew_point_2m[currentHourIndex],
                     visibility: data.hourly.visibility[currentHourIndex],
                     uvIndex: data.current.uv_index ?? null,
+                    cloudCover: data.current.cloud_cover ?? null,
                 };
 
                 const hours: HourlyItem[] = data.hourly.time

@@ -93,9 +93,10 @@ export default function WeatherDashboard({ city }: WeatherDashboardProps) {
             <WeatherBackground
                 weatherCode={current?.weatherCode ?? null}
                 isDay={current?.isDay ?? true}
+                cloudCover={current?.cloudCover ?? null}
             />
-            <main className="relative z-10 px-4 py-6">
-                <div className="@container mx-auto w-full @min-[656px]:max-w-156 @min-[976px]:max-w-236">
+            <main className="@container relative z-10 px-4 py-6">
+                <div className="@container mx-auto w-full @min-[624px]:max-w-156 @min-[944px]:max-w-236">
                     <section className="my-8 flex flex-col items-center justify-center text-center text-white sm:my-10">
                         <h1 className="text-[34px] leading-tight">
                             {city.name}

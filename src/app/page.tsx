@@ -74,7 +74,7 @@ export default function Home() {
                 </div>
             </aside>
 
-            <div className="@container relative z-10 min-w-0 flex-1 overflow-y-auto">
+            <div className="relative min-w-0 flex-1 overflow-y-auto">
                 <div className="sticky top-0 z-20 h-0">
                     <div className="flex items-center gap-2 p-3">
                         {!sidebarOpen && (
