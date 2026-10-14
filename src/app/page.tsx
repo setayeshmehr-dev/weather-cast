@@ -6,7 +6,6 @@ import { useState } from "react";
 import Sidebar from "@/components/sidebar/Sidebar";
 import WeatherDashboard from "@/components/weather/WeatherDashboard";
 import { useCities } from "@/hooks/useCities";
-import WeatherBackground from "@/components/weather/WeatherBackground";
 import type { City } from "@/lib/cities";
 
 const MOBILE_QUERY = "(max-width: 767px)";
