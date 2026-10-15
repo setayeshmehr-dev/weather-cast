@@ -64,7 +64,7 @@ export function RangeRow({ label, min, max, scaleMin, scaleMax, dot }: RangeRowP
 
     return (
         <div className="flex items-center gap-3 text-lg">
-            <span className="w-[5.5rem] shrink-0 font-semibold">{label}</span>
+            <span className="w-22 shrink-0 font-semibold">{label}</span>
             <span className="w-9 shrink-0 text-right text-white/50">
                 {Math.round(min)}°
             </span>

@@ -127,7 +127,7 @@ function PopoverArrow({ side, offset }: PopoverArrowProps) {
                 width={16}
                 height={8}
                 viewBox="0 0 16 8"
-                className="absolute -bottom-[7px]"
+                className="absolute -bottom-1.75"
                 style={{ left: offset - 8 }}
                 aria-hidden="true"
             >
@@ -145,7 +145,7 @@ function PopoverArrow({ side, offset }: PopoverArrowProps) {
             width={8}
             height={16}
             viewBox="0 0 8 16"
-            className={`absolute ${onRightEdge ? "-right-[7px]" : "-left-[7px]"}`}
+            className={`absolute ${onRightEdge ? "-right-1.75" : "-left-1.75"}`}
             style={{ top: offset - 8 }}
             aria-hidden="true"
         >
