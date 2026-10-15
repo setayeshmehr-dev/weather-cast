@@ -96,7 +96,7 @@ export default function Sidebar({
     const renderContent = () => {
         if (!searching) {
             return (
-                <ul className="flex flex-col gap-2">
+                <ul className="flex flex-col gap-5">
                     {cities.map((city) => (
                         <li key={city.id}>
                             <CityCard
@@ -141,13 +141,13 @@ export default function Sidebar({
         }
 
         return (
-            <ul className="flex flex-col">
+            <ul className="flex flex-col ">
                 {search.results.map((city) => (
                     <li key={city.id}>
                         <button
                             type="button"
                             onClick={() => onSelectCity(city)}
-                            className={`w-full truncate rounded-lg px-3 py-2 text-left text-sm ${
+                            className={`w-full truncate rounded-lg px-3 py-2 mt-2 text-left text-sm ${
                                 city.id === selectedCity.id
                                     ? "bg-white/15"
                                     : "hover:bg-white/10"
@@ -192,7 +192,7 @@ export default function Sidebar({
                         aria-label="Search for a city"
                         autoComplete="off"
                         spellCheck={false}
-                        className="min-w-0 flex-1 bg-transparent text-white outline-none placeholder:text-white/50"
+                        className="min-w-0 flex-1  bg-transparent text-white outline-none placeholder:text-white/50"
                     />
 
                     {query !== "" && (
@@ -210,7 +210,7 @@ export default function Sidebar({
                 </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 pb-2">
                 {renderContent()}
             </div>
         </div>

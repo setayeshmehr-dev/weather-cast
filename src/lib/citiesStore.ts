@@ -14,7 +14,7 @@ const DESKTOP_QUERY = "(min-width: 768px)";
 const SERVER_STATE: CitiesState = {
     cities: [DEFAULT_CITY],
     selected: DEFAULT_CITY,
-    sidebarOpen: true,
+    sidebarOpen: false,
 };
 
 let state: CitiesState = SERVER_STATE;
@@ -59,7 +59,7 @@ function readStoredState(): CitiesState | null {
         return {
             cities: cities as City[],
             selected,
-            sidebarOpen: typeof sidebarOpen === "boolean" ? sidebarOpen : true,
+            sidebarOpen: false,
         };
     } catch {
         return null;
@@ -71,12 +71,7 @@ function load(): void {
 
     loaded = true;
 
-    state =
-        readStoredState() ?? {
-            ...SERVER_STATE,
-            // Small screens start with the sidebar closed (it is an overlay there).
-            sidebarOpen: window.matchMedia(DESKTOP_QUERY).matches,
-        };
+    state = readStoredState() ?? SERVER_STATE;
 }
 
 function setState(next: CitiesState): void {

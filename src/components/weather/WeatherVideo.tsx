@@ -100,7 +100,10 @@ export default function WeatherVideo({
     }, [inView, shouldLoad, src]);
 
     return (
-        <div ref={containerRef} className={`overflow-hidden ${className}`}>
+        <div
+            ref={containerRef}
+            className={`relative h-full w-full overflow-hidden ${className}`}
+        >
             {failedPoster !== poster && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
