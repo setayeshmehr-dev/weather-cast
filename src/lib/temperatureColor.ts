@@ -36,3 +36,13 @@ export function temperatureColor(temp: number): string {
         ) as Rgb
     );
 }
+
+/** Horizontal gradient for a temperature range bar. */
+export function rangeGradient(min: number, max: number): string {
+    const steps = 4;
+    const colors = Array.from({ length: steps + 1 }, (_, i) =>
+        temperatureColor(min + ((max - min) * i) / steps)
+    );
+
+    return `linear-gradient(to right, ${colors.join(", ")})`;
+}

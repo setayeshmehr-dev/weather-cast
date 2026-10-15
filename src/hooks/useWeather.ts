@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -29,6 +28,27 @@ export type DailyItem = {
 };
 
 export type PressureTrend = "rising" | "falling" | "steady";
+
+/** One hour of the detailed series used by the detail popovers. */
+export type HourlyPoint = {
+    time: string;
+    temperature: number;
+    apparentTemperature: number;
+    weatherCode: number;
+    isDay: boolean;
+    precipitation: number;
+    precipitationChance: number;
+    uvIndex: number;
+    pressure: number | null;
+    visibility: number | null;
+};
+
+/** Yesterday, today and the next days, hour by hour. */
+export type WeatherDetails = {
+    hours: HourlyPoint[];
+    days: DailyItem[];
+    todayIndex: number;
+};
 
 export type CurrentWeather = {
     time: string;
@@ -72,13 +92,16 @@ type OpenMeteoResponse = {
     hourly: {
         time: string[];
         temperature_2m: number[];
+        apparent_temperature: number[];
         weather_code: number[];
         is_day: number[];
         relative_humidity_2m: (number | null)[];
         dew_point_2m: (number | null)[];
         visibility: (number | null)[];
         precipitation: (number | null)[];
+        precipitation_probability: (number | null)[];
         pressure_msl: (number | null)[];
+        uv_index: (number | null)[];
     };
     daily: {
         time: string[];
@@ -96,9 +119,11 @@ type WeatherState = {
     current: CurrentWeather | null;
     forecast: ForecastItem[];
     daily: DailyItem[];
+    details: WeatherDetails | null;
     error: string | null;
 };
 
+// Pressure change (hPa) over 3 hours from which the trend is rising or falling.
 const PRESSURE_TREND_THRESHOLD = 1;
 
 const EMPTY_FORECAST: ForecastItem[] = [];
@@ -133,9 +158,21 @@ export function getWeatherIcon(code: number, isDay: boolean): string {
 }
 
 function getCurrentHourIndex(times: string[], currentTime: string): number {
-    const currentHour = currentTime.slice(0, 13);
+    let closestIndex = -1;
+    let smallestDifference = Infinity;
 
-    return times.findIndex((time) => time.slice(0, 13) === currentHour);
+    times.forEach((time, index) => {
+        const difference = Math.abs(
+            new Date(time).getTime() - new Date(currentTime).getTime()
+        );
+
+        if (Number.isFinite(difference) && difference < smallestDifference) {
+            smallestDifference = difference;
+            closestIndex = index;
+        }
+    });
+
+    return closestIndex;
 }
 
 export function useWeather(city: City) {
@@ -152,21 +189,16 @@ export function useWeather(city: City) {
                     "https://api.open-meteo.com/v1/forecast" +
                     `?latitude=${latitude}&longitude=${longitude}` +
                     "&current=temperature_2m,apparent_temperature,pressure_msl,weather_code,is_day,wind_speed_10m,wind_gusts_10m,wind_direction_10m,uv_index,cloud_cover" +
-                    "&hourly=temperature_2m,weather_code,is_day,relative_humidity_2m,dew_point_2m,visibility,precipitation,pressure_msl" +
+                    "&hourly=temperature_2m,apparent_temperature,weather_code,is_day,relative_humidity_2m,dew_point_2m,visibility,precipitation,precipitation_probability,pressure_msl,uv_index" +
                     "&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max" +
                     "&past_days=1&forecast_days=10&timezone=auto";
 
                 const response = await fetch(api, { signal: controller.signal });
-
-                if (!response.ok) {
-                    throw new Error("Failed to fetch weather.");
-                }
+                if (!response.ok) throw new Error("Failed to fetch weather.");
 
                 const data = (await response.json()) as OpenMeteoResponse;
                 const currentTime = data.current.time;
-                const currentHour = currentTime.slice(0, 13);
                 const currentDate = currentTime.slice(0, 10);
-
                 const dayIndex = data.daily.sunrise.findIndex(
                     (time) => time.slice(0, 10) === currentDate
                 );
@@ -175,6 +207,7 @@ export function useWeather(city: City) {
                     throw new Error("Daily weather data is unavailable.");
                 }
 
+                // Closest hour: used for instant values (humidity, dew point, visibility).
                 const currentHourIndex = getCurrentHourIndex(
                     data.hourly.time,
                     currentTime
@@ -184,7 +217,11 @@ export function useWeather(city: City) {
                     throw new Error("Current hourly weather data is unavailable.");
                 }
 
-                const lastHourIndex = data.hourly.time.indexOf(`${currentHour}:00`);
+                // Last completed hour: precipitation and pressure are indexed by hour,
+                // and the hourly arrays start yesterday (past_days=1).
+                const lastHourIndex = data.hourly.time.indexOf(
+                    `${currentTime.slice(0, 13)}:00`
+                );
 
                 if (lastHourIndex < 24) {
                     throw new Error("Incomplete hourly data.");
@@ -215,14 +252,8 @@ export function useWeather(city: City) {
                     feelsLike: data.current.apparent_temperature,
                     pressure: data.current.pressure_msl,
                     pressureTrend,
-                    precipitationLast24h: sumPrecipitation(
-                        lastHourIndex - 23,
-                        lastHourIndex + 1
-                    ),
-                    precipitationNext24h: sumPrecipitation(
-                        lastHourIndex + 1,
-                        lastHourIndex + 25
-                    ),
+                    precipitationLast24h: sumPrecipitation(lastHourIndex - 23, lastHourIndex + 1),
+                    precipitationNext24h: sumPrecipitation(lastHourIndex + 1, lastHourIndex + 25),
                     weatherCode: data.current.weather_code,
                     isDay: data.current.is_day === 1,
                     condition: getWeatherCondition(data.current.weather_code),
@@ -246,11 +277,10 @@ export function useWeather(city: City) {
                         weatherCode: data.hourly.weather_code[index],
                         isDay: data.hourly.is_day[index] === 1,
                     }))
-                    .filter(
-                        (hour) =>
-                            hour.time.slice(0, 13) > currentHour &&
-                            Number.isFinite(hour.temperature) &&
-                            Number.isFinite(hour.weatherCode)
+                    .filter((hour) =>
+                        hour.time > currentTime &&
+                        Number.isFinite(hour.temperature) &&
+                        Number.isFinite(hour.weatherCode)
                     )
                     .slice(0, 24);
 
@@ -266,24 +296,37 @@ export function useWeather(city: City) {
                     { kind: "sunset", time: sunset },
                 ];
 
-                const days: DailyItem[] = data.daily.time
-                    .map((date, index) => ({
-                        date,
-                        min: data.daily.temperature_2m_min[index],
-                        max: data.daily.temperature_2m_max[index],
-                        weatherCode: data.daily.weather_code[index],
-                        precipitationChance:
-                            data.daily.precipitation_probability_max[index] ?? 0,
-                    }))
-                    .slice(dayIndex);
+                const allDays: DailyItem[] = data.daily.time.map((date, index) => ({
+                    date,
+                    min: data.daily.temperature_2m_min[index],
+                    max: data.daily.temperature_2m_max[index],
+                    weatherCode: data.daily.weather_code[index],
+                    precipitationChance: data.daily.precipitation_probability_max[index] ?? 0,
+                }));
+
+                const details: WeatherDetails = {
+                    hours: data.hourly.time.map((time, index) => ({
+                        time,
+                        temperature: data.hourly.temperature_2m[index],
+                        apparentTemperature: data.hourly.apparent_temperature[index],
+                        weatherCode: data.hourly.weather_code[index],
+                        isDay: data.hourly.is_day[index] === 1,
+                        precipitation: data.hourly.precipitation[index] ?? 0,
+                        precipitationChance: data.hourly.precipitation_probability[index] ?? 0,
+                        uvIndex: data.hourly.uv_index[index] ?? 0,
+                        pressure: data.hourly.pressure_msl[index],
+                        visibility: data.hourly.visibility[index],
+                    })),
+                    days: allDays,
+                    todayIndex: dayIndex,
+                };
 
                 setState({
                     key,
                     current: weather,
-                    forecast: [...hours, ...events].sort((a, b) =>
-                        a.time.localeCompare(b.time)
-                    ),
-                    daily: days,
+                    forecast: [...hours, ...events].sort((a, b) => a.time.localeCompare(b.time)),
+                    daily: allDays.slice(dayIndex),
+                    details,
                     error: null,
                 });
             } catch {
@@ -293,6 +336,7 @@ export function useWeather(city: City) {
                         current: null,
                         forecast: EMPTY_FORECAST,
                         daily: EMPTY_DAILY,
+                        details: null,
                         error: "Unable to load weather data.",
                     });
                 }
@@ -304,12 +348,14 @@ export function useWeather(city: City) {
         return () => controller.abort();
     }, [key, latitude, longitude]);
 
+    // Data of another city (or none yet) means we are still loading this one.
     const result = state !== null && state.key === key ? state : null;
 
     return {
         current: result?.current ?? null,
         forecast: result?.forecast ?? EMPTY_FORECAST,
         daily: result?.daily ?? EMPTY_DAILY,
+        details: result?.details ?? null,
         loading: result === null,
         error: result?.error ?? null,
     };

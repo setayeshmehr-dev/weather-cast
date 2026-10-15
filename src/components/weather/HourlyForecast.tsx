@@ -24,7 +24,7 @@ export default function HourlyForecast({
     error,
 }: HourlyForecastProps) {
     return (
-        <WeatherCard title="HOURLY FORECAST" divided>
+        <WeatherCard skeleton="strip" title="HOURLY FORECAST" divided>
             {loading && (
                 <p className="py-4 text-sm text-white/70">
                     Loading forecast...

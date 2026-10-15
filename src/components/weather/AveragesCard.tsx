@@ -28,6 +28,7 @@ export default function AveragesCard({
 
     return (
         <WeatherCard
+            loading={loading}
             title="AVERAGES"
             className={className}
             bodyClassName="flex flex-col justify-between"

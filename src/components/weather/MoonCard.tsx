@@ -247,6 +247,7 @@ export default function MoonCard({
 
     return (
         <WeatherCard
+            skeleton="wide"
             title={moon?.name ?? "MOON PHASE"}
             icon={
                 moon ? (

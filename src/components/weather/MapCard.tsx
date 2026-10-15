@@ -250,6 +250,7 @@ export default function MapCard({ city, current, className }: MapCardProps) {
 
     return (
         <WeatherCard
+            skeleton="none"
             title={
                 <div className="flex w-full items-center justify-between gap-3">
                     <span>WEATHER MAP</span>

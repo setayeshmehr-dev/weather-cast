@@ -110,6 +110,7 @@ export default function PressureCard({
 }: PressureCardProps) {
     return (
         <WeatherCard
+            skeleton="gauge"
             title="PRESSURE"
             className={className}
             bodyClassName="relative"

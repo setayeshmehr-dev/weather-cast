@@ -49,6 +49,7 @@ export default function TenDayForecast({
             title="10-DAY FORECAST"
             divided
             flush
+            skeleton="rows"
             className={className}
             bodyClassName="flex flex-col"
         >
@@ -89,6 +90,8 @@ export default function TenDayForecast({
                         return (
                             <li
                                 key={day.date}
+                                data-popover-anchor
+                                data-date={day.date}
                                 className="grid flex-1 grid-cols-[56px_28px_38px_minmax(0,1fr)_28px] items-center gap-x-2 border-t border-white/15 text-base"
                             >
                                 <span className="font-medium">

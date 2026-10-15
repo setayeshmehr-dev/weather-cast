@@ -30,6 +30,8 @@ export default function AirQualityCard({
 
     return (
         <WeatherCard
+            skeleton="bars"
+            loading={loading}
             title="AIR QUALITY"
             className={className}
             bodyClassName="flex flex-col justify-between"
