@@ -5,9 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 
-const WIDTH = 320;
-const MAX_HEIGHT = 640;
-const MIN_HEIGHT = 240;
+const WIDTH = 300;
+const HEIGHT = 600;
 const GAP = 14;
 const MARGIN = 12;
 const ARROW_INSET = 28;
@@ -41,36 +40,77 @@ function computePlacement(anchor: HTMLElement): Placement {
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
 
-    const height = Math.min(MAX_HEIGHT, viewportHeight - 2 * MARGIN);
+    const height = HEIGHT;
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
 
-    const roomBelow = viewportHeight - centerY - MARGIN;
-    const roomLeft = rect.left - GAP - MARGIN;
     const roomRight = viewportWidth - rect.right - GAP - MARGIN;
+    const roomLeft = rect.left - GAP - MARGIN;
+    const roomAbove = rect.top - GAP - MARGIN;
+    const roomBelow = viewportHeight - rect.bottom - GAP - MARGIN;
 
-    if (roomBelow >= height / 2) {
-        const top = clamp(centerY - height / 2, MARGIN, viewportHeight - MARGIN - height);
-        const arrow = clamp(centerY - top, ARROW_INSET, height - ARROW_INSET);
+    const canOpenRight = roomRight >= WIDTH;
+    const canOpenLeft = roomLeft >= WIDTH;
+    const canOpenBelow = roomBelow >= height;
+    const canOpenAbove = roomAbove >= height;
 
-        if (roomLeft >= WIDTH) {
-            return { side: "left", top, left: rect.left - GAP - WIDTH, height, arrow };
+    if (canOpenRight || canOpenLeft) {
+        if (canOpenBelow || canOpenAbove) {
+            const side: Side = canOpenRight ? "right" : "left";
+            const top = canOpenBelow
+                ? clamp(rect.top, MARGIN, viewportHeight - MARGIN - height)
+                : clamp(rect.bottom - height, MARGIN, viewportHeight - MARGIN - height);
+
+            return {
+                side,
+                top,
+                left: side === "right"
+                    ? rect.right + GAP
+                    : rect.left - GAP - WIDTH,
+                height,
+                arrow: clamp(centerY - top, ARROW_INSET, height - ARROW_INSET),
+            };
         }
 
-        if (roomRight >= WIDTH) {
-            return { side: "right", top, left: rect.right + GAP, height, arrow };
-        }
+        const top = clamp(
+            centerY - height / 2,
+            MARGIN,
+            viewportHeight - MARGIN - height
+        );
+        const side: Side = canOpenRight ? "right" : "left";
+
+        return {
+            side,
+            top,
+            left: side === "right"
+                ? rect.right + GAP
+                : rect.left - GAP - WIDTH,
+            height,
+            arrow: clamp(centerY - top, ARROW_INSET, height - ARROW_INSET),
+        };
     }
 
-    const available = rect.top - GAP - MARGIN;
-    const topHeight = clamp(available, MIN_HEIGHT, height);
-    const left = clamp(centerX - WIDTH / 2, MARGIN, viewportWidth - MARGIN - WIDTH);
+    const top = canOpenAbove
+        ? rect.top - GAP - height
+        : canOpenBelow
+            ? rect.bottom + GAP
+            : clamp(
+                centerY - height / 2,
+                MARGIN,
+                viewportHeight - MARGIN - height
+            );
+
+    const left = clamp(
+        centerX - WIDTH / 2,
+        MARGIN,
+        viewportWidth - MARGIN - WIDTH
+    );
 
     return {
         side: "top",
-        top: Math.max(MARGIN, rect.top - GAP - topHeight),
+        top,
         left,
-        height: topHeight,
+        height,
         arrow: clamp(centerX - left, ARROW_INSET, WIDTH - ARROW_INSET),
     };
 }
