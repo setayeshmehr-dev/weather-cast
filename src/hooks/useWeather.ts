@@ -41,6 +41,11 @@ export type HourlyPoint = {
     uvIndex: number;
     pressure: number | null;
     visibility: number | null;
+    windSpeed: number;
+    windGusts: number;
+    windDirection: number;
+    relativeHumidity: number | null;
+    dewPoint: number | null;
 };
 
 /** Yesterday, today and the next days, hour by hour. */
@@ -102,6 +107,9 @@ type OpenMeteoResponse = {
         precipitation_probability: (number | null)[];
         pressure_msl: (number | null)[];
         uv_index: (number | null)[];
+        wind_speed_10m: (number | null)[];
+        wind_gusts_10m: (number | null)[];
+        wind_direction_10m: (number | null)[];
     };
     daily: {
         time: string[];
@@ -189,7 +197,7 @@ export function useWeather(city: City) {
                     "https://api.open-meteo.com/v1/forecast" +
                     `?latitude=${latitude}&longitude=${longitude}` +
                     "&current=temperature_2m,apparent_temperature,pressure_msl,weather_code,is_day,wind_speed_10m,wind_gusts_10m,wind_direction_10m,uv_index,cloud_cover" +
-                    "&hourly=temperature_2m,apparent_temperature,weather_code,is_day,relative_humidity_2m,dew_point_2m,visibility,precipitation,precipitation_probability,pressure_msl,uv_index" +
+                    "&hourly=temperature_2m,apparent_temperature,weather_code,is_day,relative_humidity_2m,dew_point_2m,visibility,precipitation,precipitation_probability,pressure_msl,uv_index,wind_speed_10m,wind_gusts_10m,wind_direction_10m" +
                     "&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max" +
                     "&past_days=1&forecast_days=10&timezone=auto";
 
@@ -316,6 +324,11 @@ export function useWeather(city: City) {
                         uvIndex: data.hourly.uv_index[index] ?? 0,
                         pressure: data.hourly.pressure_msl[index],
                         visibility: data.hourly.visibility[index],
+                        windSpeed: data.hourly.wind_speed_10m[index] ?? 0,
+                        windGusts: data.hourly.wind_gusts_10m[index] ?? 0,
+                        windDirection: data.hourly.wind_direction_10m[index] ?? 0,
+                        relativeHumidity: data.hourly.relative_humidity_2m[index],
+                        dewPoint: data.hourly.dew_point_2m[index],
                     })),
                     days: allDays,
                     todayIndex: dayIndex,

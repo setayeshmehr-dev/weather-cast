@@ -4,16 +4,33 @@ import { useEffect, useState } from "react";
 
 import type { City } from "@/lib/cities";
 
+/** Current concentrations in µg/m³. */
+export type Pollutants = {
+    pm25: number | null;
+    pm10: number | null;
+    ozone: number | null;
+    no2: number | null;
+    so2: number | null;
+    co: number | null;
+};
+
 export type AirQuality = {
     index: number;
     label: string;
     trend: "better" | "worse" | "similar" | null;
+    pollutants: Pollutants;
 };
 
 type AirQualityResponse = {
     current: {
         time: string;
         european_aqi: number | null;
+        pm2_5: number | null;
+        pm10: number | null;
+        ozone: number | null;
+        nitrogen_dioxide: number | null;
+        sulphur_dioxide: number | null;
+        carbon_monoxide: number | null;
     };
     hourly: {
         time: string[];
@@ -63,7 +80,7 @@ export function useAirQuality(city: City) {
                 const api =
                     "https://air-quality-api.open-meteo.com/v1/air-quality" +
                     `?latitude=${latitude}&longitude=${longitude}` +
-                    "&current=european_aqi" +
+                    "&current=european_aqi,pm2_5,pm10,ozone,nitrogen_dioxide,sulphur_dioxide,carbon_monoxide" +
                     "&hourly=european_aqi" +
                     "&past_days=1&forecast_days=1&timezone=auto";
 
@@ -87,6 +104,14 @@ export function useAirQuality(city: City) {
                         index,
                         label: getLabel(index),
                         trend: getTrend(index, yesterday),
+                        pollutants: {
+                            pm25: data.current.pm2_5 ?? null,
+                            pm10: data.current.pm10 ?? null,
+                            ozone: data.current.ozone ?? null,
+                            no2: data.current.nitrogen_dioxide ?? null,
+                            so2: data.current.sulphur_dioxide ?? null,
+                            co: data.current.carbon_monoxide ?? null,
+                        },
                     },
                     error: null,
                 });

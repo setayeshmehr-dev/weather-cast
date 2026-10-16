@@ -18,6 +18,11 @@ type Plotted = {
     hour: number;
 };
 
+type Series = {
+    values: (number | null)[];
+    color: string;
+};
+
 type DayChartProps = {
     /** One value per hour of the day (index = hour). */
     values: (number | null)[];
@@ -30,12 +35,16 @@ type DayChartProps = {
     tickFontSize?: number;
     /** Fades the area toward the bottom. */
     fade?: boolean;
-    /** Content shown above the plot for 12 two-hour slots. */
+    /** Number of slots of the row above the plot (12 = every two hours). */
+    topSlots?: number;
+    /** Content shown above the plot; it receives the hour of the slot. */
     renderTop?: (hour: number) => ReactNode;
     /** Current time as a fractional hour (today only). */
     nowHour?: number | null;
     markers?: { index: number; label: string }[];
     bands?: { value: number; label: string }[];
+    /** A second line without area (for example the wind gusts). */
+    secondary?: Series;
     ariaLabel: string;
 };
 
@@ -59,31 +68,42 @@ export default function DayChart({
     height = 150,
     tickFontSize = 11,
     fade = false,
+    topSlots = 12,
     renderTop,
     nowHour = null,
     markers = [],
     bands = [],
+    secondary,
     ariaLabel,
 }: DayChartProps) {
     const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
     const strokeId = `${id}-stroke`;
     const fillId = `${id}-fill`;
+    const pastId = `${id}-past`;
+    const futureId = `${id}-future`;
 
     const min = ticks[0];
     const max = ticks[ticks.length - 1];
     const span = max - min || 1;
     const plotBottom = PLOT_TOP + height;
+    const svgHeight = plotBottom + AXIS_HEIGHT;
 
     const x = (hour: number) => (hour / 24) * PLOT_WIDTH;
     const y = (value: number) => PLOT_TOP + (1 - (value - min) / span) * height;
 
-    const points: Plotted[] = [];
+    const toPoints = (list: (number | null)[]): Plotted[] => {
+        const result: Plotted[] = [];
 
-    values.forEach((value, hour) => {
-        if (value !== null && Number.isFinite(value)) {
-            points.push({ x: x(hour), y: y(value), hour });
-        }
-    });
+        list.forEach((value, hour) => {
+            if (value !== null && Number.isFinite(value)) {
+                result.push({ x: x(hour), y: y(value), hour });
+            }
+        });
+
+        return result;
+    };
+
+    const points = toPoints(values);
 
     if (points.length < 2) {
         return (
@@ -95,6 +115,10 @@ export default function DayChart({
     const first = points[0];
     const last = points[points.length - 1];
     const area = `${line} L ${last.x.toFixed(2)} ${plotBottom} L ${first.x.toFixed(2)} ${plotBottom} Z`;
+
+    const secondaryPoints = secondary ? toPoints(secondary.values) : [];
+    const secondaryLine =
+        secondaryPoints.length >= 2 ? smoothPath(secondaryPoints) : null;
 
     const nowValue = nowHour === null ? null : valueAt(values, nowHour);
     const now =
@@ -108,23 +132,56 @@ export default function DayChart({
         color: colorAt(tick),
     }));
 
+    // The part before "now" is dashed, the part after it is solid.
+    const lineProps = {
+        fill: "none",
+        strokeWidth: 3,
+        strokeLinecap: "round" as const,
+        strokeLinejoin: "round" as const,
+    };
+
+    const renderLine = (path: string, stroke: string) =>
+        now ? (
+            <>
+                <path
+                    d={path}
+                    stroke={stroke}
+                    strokeDasharray="5 4"
+                    strokeOpacity={0.7}
+                    clipPath={`url(#${pastId})`}
+                    {...lineProps}
+                />
+                <path
+                    d={path}
+                    stroke={stroke}
+                    clipPath={`url(#${futureId})`}
+                    {...lineProps}
+                />
+            </>
+        ) : (
+            <path d={path} stroke={stroke} {...lineProps} />
+        );
+
     return (
-        <div className="rounded-xl border border-white/10 bg-white/4 px-2 pt-2">
+        <div className="rounded-xl border border-white/10 bg-white/[0.04] px-2 pt-2">
             {renderTop && (
                 <div
-                    className="mb-1 grid grid-cols-12 items-center text-center text-[11px] font-medium"
-                    style={{ paddingRight: `${(GUTTER / WIDTH) * 100}%` }}
+                    className="mb-1 grid items-center text-center text-[11px] font-medium"
+                    style={{
+                        gridTemplateColumns: `repeat(${topSlots}, minmax(0, 1fr))`,
+                        paddingRight: `${(GUTTER / WIDTH) * 100}%`,
+                    }}
                 >
-                    {Array.from({ length: 12 }, (_, slot) => (
+                    {Array.from({ length: topSlots }, (_, slot) => (
                         <div key={slot} className="flex justify-center">
-                            {renderTop(slot * 2 + 1)}
+                            {renderTop(Math.floor(((slot + 0.5) * 24) / topSlots))}
                         </div>
                     ))}
                 </div>
             )}
 
             <svg
-                viewBox={`0 0 ${WIDTH} ${plotBottom + AXIS_HEIGHT}`}
+                viewBox={`0 0 ${WIDTH} ${svgHeight}`}
                 className="block w-full"
                 role="img"
                 aria-label={ariaLabel}
@@ -164,6 +221,22 @@ export default function DayChart({
                             />
                         ))}
                     </linearGradient>
+
+                    {now && (
+                        <>
+                            <clipPath id={pastId}>
+                                <rect x={0} y={0} width={now.x} height={svgHeight} />
+                            </clipPath>
+                            <clipPath id={futureId}>
+                                <rect
+                                    x={now.x}
+                                    y={0}
+                                    width={WIDTH - now.x}
+                                    height={svgHeight}
+                                />
+                            </clipPath>
+                        </>
+                    )}
                 </defs>
 
                 {ticks.map((tick) => (
@@ -239,14 +312,9 @@ export default function DayChart({
                     />
                 )}
 
-                <path
-                    d={line}
-                    fill="none"
-                    stroke={`url(#${strokeId})`}
-                    strokeWidth={3}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                />
+                {secondary && secondaryLine && renderLine(secondaryLine, secondary.color)}
+
+                {renderLine(line, `url(#${strokeId})`)}
 
                 {markers.map((marker) => {
                     const point = points.find((item) => item.hour === marker.index);

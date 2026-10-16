@@ -46,6 +46,7 @@ type ConditionsPopoverProps = {
     details: WeatherDetails;
     current: CurrentWeather;
     initialDate: string;
+    initialMode?: Mode;
 };
 
 export default function ConditionsPopover({
@@ -54,11 +55,12 @@ export default function ConditionsPopover({
     details,
     current,
     initialDate,
+    initialMode = "actual",
 }: ConditionsPopoverProps) {
     const todayDate = details.days[details.todayIndex].date;
 
     const [date, setDate] = useState(initialDate);
-    const [mode, setMode] = useState<Mode>("actual");
+    const [mode, setMode] = useState<Mode>(initialMode);
 
     const index = Math.max(details.days.findIndex((item) => item.date === date), 0);
     const day = details.days[index];

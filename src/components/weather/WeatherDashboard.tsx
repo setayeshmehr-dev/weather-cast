@@ -1,5 +1,9 @@
 "use client";
 
+import {
+    WeatherIconProvider,
+    WeatherIconStyleToggle,
+} from "@/components/weather/WeatherIcon";
 import AirQualityCard from "@/components/weather/AirQualityCard";
 import AveragesCard from "@/components/weather/AveragesCard";
 import FeelsLikeCard from "@/components/weather/FeelsLikeCard";
@@ -25,6 +29,10 @@ import { useAirQuality } from "@/hooks/useAirQuality";
 import { useClimateAverage } from "@/hooks/useClimateAverage";
 import { useWeather } from "@/hooks/useWeather";
 import type { City } from "@/lib/cities";
+import AirQualityPopover from "@/components/weather/popover/AirQualityPopover";
+import HumidityPopover from "@/components/weather/popover/HumidityPopover";
+import PrecipitationPopover from "@/components/weather/popover/PrecipitationPopover";
+import WindPopover from "@/components/weather/popover/WindPopover";
 
 /*
  * Layout breakpoints are container queries on the width of the content column
@@ -106,260 +114,329 @@ export default function WeatherDashboard({ city }: WeatherDashboardProps) {
 
     return (
         <WeatherLoadingContext.Provider value={loading}>
-            <WeatherBackground
-                weatherCode={current?.weatherCode ?? null}
-                isDay={current?.isDay ?? true}
-                cloudCover={current?.cloudCover ?? null}
-            />
+            <WeatherIconProvider>
 
-            <main className="@container relative z-10 px-4 py-6">
-                <div className="@container mx-auto w-full @min-[624px]:max-w-156 @min-[944px]:max-w-236">
-                    <section className="my-8 flex flex-col items-center justify-center text-center text-white sm:my-10">
-                        <h1 className="text-[34px] leading-tight">
-                            {city.name}
-                        </h1>
+                <WeatherBackground
+                    weatherCode={current?.weatherCode ?? null}
+                    isDay={current?.isDay ?? true}
+                    cloudCover={current?.cloudCover ?? null}
+                />
 
-                        {loading && (
-                            <p className="mt-4 text-white/70">
-                                Loading weather...
-                            </p>
-                        )}
+                <main className="@container relative z-10 px-4 py-6">
+                    <div className="@container mx-auto w-full @min-[624px]:max-w-156 @min-[944px]:max-w-236">
+                        <section className="my-8 flex flex-col items-center justify-center text-center text-white sm:my-10">
+                            <h1 className="text-[34px] leading-tight">
+                                {city.name}
+                            </h1>
 
-                        {error && (
-                            <p role="alert" className="mt-4 text-white/80">
-                                {error}
-                            </p>
-                        )}
-
-                        {!loading && !error && current && (
-                            <>
-                                <p className="mt-1 text-[96px] leading-none font-extralight">
-                                    {Math.round(current.temperature)}°
+                            {loading && (
+                                <p className="mt-4 text-white/70">
+                                    Loading weather...
                                 </p>
+                            )}
 
-                                <p className="mt-2 text-xl">
-                                    {current.condition}
+                            {error && (
+                                <p role="alert" className="mt-4 text-white/80">
+                                    {error}
                                 </p>
+                            )}
 
-                                <p className="text-xl">
-                                    H:{Math.round(current.max)}° L:{Math.round(current.min)}°
-                                </p>
-                            </>
-                        )}
-                    </section>
+                            {!loading && !error && current && (
+                                <>
+                                    <p className="mt-1 text-[96px] leading-none font-extralight">
+                                        {Math.round(current.temperature)}°
+                                    </p>
 
-                    <DetailTrigger
-                        label="Show hourly conditions"
-                        disabled={!popoverReady}
-                        popover={({ anchor, close }) =>
-                            details && current && todayDate ? (
-                                <ConditionsPopover
-                                    anchor={anchor}
-                                    onClose={close}
-                                    details={details}
-                                    current={current}
-                                    initialDate={todayDate}
-                                />
-                            ) : null
-                        }
-                    >
-                        <HourlyForecast
-                            current={current}
-                            forecast={forecast}
-                            loading={loading}
-                            error={error}
-                        />
-                    </DetailTrigger>
+                                    <p className="mt-2 text-xl">
+                                        {current.condition}
+                                    </p>
 
-                    <section
-                        aria-label="Weather details"
-                        className="grid [--cols:2] [--gap:12px] [--cell:calc((100cqw-var(--gap))/2)] @min-[624px]:[--cols:4] @min-[624px]:[--gap:16px] @min-[624px]:[--cell:144px] @min-[944px]:[--cols:6]"
-                        style={{
-                            gridTemplateColumns: "repeat(var(--cols), var(--cell))",
-                            gridAutoRows: "var(--cell)",
-                            gap: "var(--gap)",
-                            marginTop: "var(--gap)",
-                        }}
-                    >
+                                    <p className="text-xl">
+                                        H:{Math.round(current.max)}° L:{Math.round(current.min)}°
+                                    </p>
+                                </>
+                            )}
+                        </section>
+
                         <DetailTrigger
-                            label="Show conditions for a day"
+                            label="Show hourly conditions"
                             disabled={!popoverReady}
-                            className={tenDayClassName}
-                            popover={({ anchor, target, close }) =>
+                            popover={({ anchor, close }) =>
                                 details && current && todayDate ? (
                                     <ConditionsPopover
                                         anchor={anchor}
                                         onClose={close}
                                         details={details}
                                         current={current}
-                                        initialDate={clickedDate(target) ?? todayDate}
-                                    />
-                                ) : null
-                            }
-                        >
-                            <TenDayForecast
-                                current={current}
-                                daily={daily}
-                                loading={loading}
-                                error={error}
-                            />
-                        </DetailTrigger>
-
-                        <MapCard
-                            city={city}
-                            current={current}
-                            className={mapClassName}
-                        />
-
-                        <AirQualityCard
-                            airQuality={airQuality}
-                            loading={airQualityLoading}
-                            error={airQualityError}
-                            className={airQualityClassName}
-                        />
-
-                        <WindCard
-                            current={current}
-                            loading={loading}
-                            error={error}
-                            className={windClassName}
-                        />
-
-                        <MoonCard
-                            current={current}
-                            date={todayDate}
-                            latitude={city.latitude}
-                            longitude={city.longitude}
-                            loading={loading}
-                            error={error}
-                            className={moonClassName}
-                        />
-
-                        <DetailTrigger
-                            label="Show UV index details"
-                            disabled={!popoverReady}
-                            className={uvIndexClassName}
-                            popover={({ anchor, close }) =>
-                                details && current && todayDate ? (
-                                    <UvPopover
-                                        anchor={anchor}
-                                        onClose={close}
-                                        details={details}
-                                        current={current}
                                         initialDate={todayDate}
                                     />
                                 ) : null
                             }
                         >
-                            <UVIndexCard
+                            <HourlyForecast
                                 current={current}
+                                forecast={forecast}
                                 loading={loading}
                                 error={error}
                             />
                         </DetailTrigger>
 
-                        <SunriseCard
-                            current={current}
-                            forecast={forecast}
-                            loading={loading}
-                            error={error}
-                            className={sunriseClassName}
-                        />
-
-                        <FeelsLikeCard
-                            current={current}
-                            loading={loading}
-                            error={error}
-                            className={feelsLikeClassName}
-                        />
-
-                        <PrecipitationCard
-                            current={current}
-                            loading={loading}
-                            error={error}
-                            className={precipitationClassName}
-                        />
-
-                        <DetailTrigger
-                            label="Show visibility details"
-                            disabled={!popoverReady}
-                            className={visibilityClassName}
-                            popover={({ anchor, close }) =>
-                                details && current && todayDate ? (
-                                    <VisibilityPopover
-                                        anchor={anchor}
-                                        onClose={close}
-                                        details={details}
-                                        current={current}
-                                        initialDate={todayDate}
-                                    />
-                                ) : null
-                            }
+                        <section
+                            aria-label="Weather details"
+                            className="grid [--cols:2] [--gap:12px] [--cell:calc((100cqw-var(--gap))/2)] @min-[624px]:[--cols:4] @min-[624px]:[--gap:16px] @min-[624px]:[--cell:144px] @min-[944px]:[--cols:6]"
+                            style={{
+                                gridTemplateColumns: "repeat(var(--cols), var(--cell))",
+                                gridAutoRows: "var(--cell)",
+                                gap: "var(--gap)",
+                                marginTop: "var(--gap)",
+                            }}
                         >
-                            <VisibilityCard
-                                current={current}
-                                loading={loading}
-                                error={error}
-                            />
-                        </DetailTrigger>
-
-                        <HumidityCard
-                            current={current}
-                            loading={loading}
-                            error={error}
-                            className={humidityClassName}
-                        />
-
-                        <DetailTrigger
-                            label="Show pressure details"
-                            disabled={!popoverReady}
-                            className={pressureClassName}
-                            popover={({ anchor, close }) =>
-                                details && current && todayDate ? (
-                                    <PressurePopover
-                                        anchor={anchor}
-                                        onClose={close}
-                                        details={details}
-                                        current={current}
-                                        initialDate={todayDate}
-                                    />
-                                ) : null
-                            }
-                        >
-                            <PressureCard
-                                current={current}
-                                loading={loading}
-                                error={error}
-                            />
-                        </DetailTrigger>
-
-                        <AveragesCard
-                            today={current?.max ?? null}
-                            average={climateAverage}
-                            loading={loading || climateLoading}
-                            error={error ?? climateError}
-                            className={averagesClassName}
-                        />
-                    </section>
-
-                    <footer className="mt-6 text-center text-xs text-white/60">
-                        <p>
-                            Weather data by{" "}
-                            <a
-                                href="https://open-meteo.com/"
-                                target="_blank"
-                                rel="noreferrer"
-                                className="underline"
+                            <DetailTrigger
+                                label="Show conditions for a day"
+                                disabled={!popoverReady}
+                                className={tenDayClassName}
+                                popover={({ anchor, target, close }) =>
+                                    details && current && todayDate ? (
+                                        <ConditionsPopover
+                                            anchor={anchor}
+                                            onClose={close}
+                                            details={details}
+                                            current={current}
+                                            initialDate={clickedDate(target) ?? todayDate}
+                                        />
+                                    ) : null
+                                }
                             >
-                                Open-Meteo.com
-                            </a>
-                        </p>
-                        <p>Air quality data: CAMS ENSEMBLE via Open-Meteo</p>
-                        <p>Climate averages: ERA5 reanalysis via Open-Meteo</p>
-                        <p>Location search: GeoNames via Open-Meteo</p>
-                    </footer>
-                </div>
-            </main>
+                                <TenDayForecast
+                                    current={current}
+                                    daily={daily}
+                                    loading={loading}
+                                    error={error}
+                                />
+                            </DetailTrigger>
+
+                            <MapCard
+                                city={city}
+                                current={current}
+                                className={mapClassName}
+                            />
+
+                            <DetailTrigger
+                                label="Show air quality details"
+                                disabled={!airQuality}
+                                className={airQualityClassName}
+                                popover={({ anchor, close }) =>
+                                    airQuality ? (
+                                        <AirQualityPopover
+                                            anchor={anchor}
+                                            onClose={close}
+                                            airQuality={airQuality}
+                                        />
+                                    ) : null
+                                }
+                            >
+                                <AirQualityCard
+                                    airQuality={airQuality}
+                                    loading={airQualityLoading}
+                                    error={airQualityError}
+                                />
+                            </DetailTrigger>
+
+                            <DetailTrigger
+                                label="Show wind details"
+                                disabled={!popoverReady}
+                                className={windClassName}
+                                popover={({ anchor, close }) =>
+                                    details && current && todayDate ? (
+                                        <WindPopover
+                                            anchor={anchor}
+                                            onClose={close}
+                                            details={details}
+                                            current={current}
+                                            initialDate={todayDate}
+                                        />
+                                    ) : null
+                                }
+                            >
+                                <WindCard
+                                    current={current}
+                                    loading={loading}
+                                    error={error}
+                                />
+                            </DetailTrigger>
+
+                            <MoonCard
+                                current={current}
+                                date={todayDate}
+                                latitude={city.latitude}
+                                longitude={city.longitude}
+                                loading={loading}
+                                error={error}
+                                className={moonClassName}
+                            />
+
+                            <DetailTrigger
+                                label="Show UV index details"
+                                disabled={!popoverReady}
+                                className={uvIndexClassName}
+                                popover={({ anchor, close }) =>
+                                    details && current && todayDate ? (
+                                        <UvPopover
+                                            anchor={anchor}
+                                            onClose={close}
+                                            details={details}
+                                            current={current}
+                                            initialDate={todayDate}
+                                        />
+                                    ) : null
+                                }
+                            >
+                                <UVIndexCard
+                                    current={current}
+                                    loading={loading}
+                                    error={error}
+                                />
+                            </DetailTrigger>
+
+                            <SunriseCard
+                                current={current}
+                                forecast={forecast}
+                                loading={loading}
+                                error={error}
+                                className={sunriseClassName}
+                            />
+
+                            <DetailTrigger
+                                label="Show feels like details"
+                                disabled={!popoverReady}
+                                className={feelsLikeClassName}
+                                popover={({ anchor, close }) =>
+                                    details && current && todayDate ? (
+                                        <ConditionsPopover
+                                            anchor={anchor}
+                                            onClose={close}
+                                            details={details}
+                                            current={current}
+                                            initialDate={todayDate}
+                                            initialMode="feels"
+                                        />
+                                    ) : null
+                                }
+                            >
+                                <FeelsLikeCard
+                                    current={current}
+                                    loading={loading}
+                                    error={error}
+                                />
+                            </DetailTrigger>
+
+                            <DetailTrigger
+                                label="Show precipitation details"
+                                disabled={!popoverReady}
+                                className={precipitationClassName}
+                                popover={({ anchor, close }) =>
+                                    details && current && todayDate ? (
+                                        <PrecipitationPopover
+                                            anchor={anchor}
+                                            onClose={close}
+                                            details={details}
+                                            current={current}
+                                            initialDate={todayDate}
+                                        />
+                                    ) : null
+                                }
+                            >
+                                <PrecipitationCard
+                                    current={current}
+                                    loading={loading}
+                                    error={error}
+                                />
+                            </DetailTrigger>
+
+                            <DetailTrigger
+                                label="Show visibility details"
+                                disabled={!popoverReady}
+                                className={visibilityClassName}
+                                popover={({ anchor, close }) =>
+                                    details && current && todayDate ? (
+                                        <VisibilityPopover
+                                            anchor={anchor}
+                                            onClose={close}
+                                            details={details}
+                                            current={current}
+                                            initialDate={todayDate}
+                                        />
+                                    ) : null
+                                }
+                            >
+                                <VisibilityCard
+                                    current={current}
+                                    loading={loading}
+                                    error={error}
+                                />
+                            </DetailTrigger>
+
+                            <DetailTrigger
+                                label="Show humidity details"
+                                disabled={!popoverReady}
+                                className={humidityClassName}
+                                popover={({ anchor, close }) =>
+                                    details && current && todayDate ? (
+                                        <HumidityPopover
+                                            anchor={anchor}
+                                            onClose={close}
+                                            details={details}
+                                            current={current}
+                                            initialDate={todayDate}
+                                        />
+                                    ) : null
+                                }
+                            >
+                                <HumidityCard
+                                    current={current}
+                                    loading={loading}
+                                    error={error}
+                                />
+                            </DetailTrigger>
+
+                            <DetailTrigger
+                                label="Show pressure details"
+                                disabled={!popoverReady}
+                                className={pressureClassName}
+                                popover={({ anchor, close }) =>
+                                    details && current && todayDate ? (
+                                        <PressurePopover
+                                            anchor={anchor}
+                                            onClose={close}
+                                            details={details}
+                                            current={current}
+                                            initialDate={todayDate}
+                                        />
+                                    ) : null
+                                }
+                            >
+                                <PressureCard
+                                    current={current}
+                                    loading={loading}
+                                    error={error}
+                                />
+                            </DetailTrigger>
+
+                            <AveragesCard
+                                today={current?.max ?? null}
+                                average={climateAverage}
+                                loading={loading || climateLoading}
+                                error={error ?? climateError}
+                                className={averagesClassName}
+                            />
+                        </section>
+
+                        <WeatherIconStyleToggle />
+
+                       
+                    </div>
+                </main>
+            </WeatherIconProvider>
         </WeatherLoadingContext.Provider>
     );
 }
