@@ -1,4 +1,5 @@
 const RAD = Math.PI / 180;
+const DEG = 180 / Math.PI;
 const DAY_MS = 86_400_000;
 const HOUR_MS = 3_600_000;
 const J1970 = 2440588;
@@ -10,7 +11,7 @@ const EARTH_RADIUS_KM = 6378.14;
 // Altitude (degrees) of the moon's center at moonrise: apparent radius + parallax.
 const MOON_RISE_ALTITUDE = 0.133;
 
-// Sampling step used to find the moonrise inside a day.
+// Sampling step used to find the moonrise and moonset inside a day.
 const RISE_STEP_MS = 6 * 60_000;
 
 // How far ahead (days) we look for the next full moon.
@@ -133,6 +134,7 @@ function moonIllumination(ms: number) {
         SUN_DISTANCE_KM * Math.sin(elongation),
         moon.distance - SUN_DISTANCE_KM * Math.cos(elongation)
     );
+    // Position angle of the sun seen from the moon, eastward from north.
     const angle = Math.atan2(
         Math.cos(sun.dec) * Math.sin(sun.ra - moon.ra),
         Math.sin(sun.dec) * Math.cos(moon.dec) -
@@ -144,6 +146,7 @@ function moonIllumination(ms: number) {
     return {
         illumination: (1 + Math.cos(incidence)) / 2,
         phase: 0.5 + (0.5 * incidence * (angle < 0 ? -1 : 1)) / Math.PI,
+        angle,
     };
 }
 
@@ -169,27 +172,33 @@ function moonAltitude(ms: number, latitude: number, longitude: number): number {
     return (altitude + refraction(altitude)) / RAD;
 }
 
-function findMoonrise(
+/** Moonrise and moonset (UTC ms) inside the 24 hours that start at dayStartMs. */
+function findMoonEvents(
     dayStartMs: number,
     latitude: number,
     longitude: number
-): number | null {
+): { rise: number | null; set: number | null } {
+    let rise: number | null = null;
+    let set: number | null = null;
+
     let previous =
         moonAltitude(dayStartMs, latitude, longitude) - MOON_RISE_ALTITUDE;
 
     for (let t = dayStartMs + RISE_STEP_MS; t <= dayStartMs + DAY_MS; t += RISE_STEP_MS) {
         const next = moonAltitude(t, latitude, longitude) - MOON_RISE_ALTITUDE;
 
-        if (previous < 0 && next >= 0) {
-            const ratio = -previous / (next - previous);
+        if (rise === null && previous < 0 && next >= 0) {
+            rise = t - RISE_STEP_MS + (-previous / (next - previous)) * RISE_STEP_MS;
+        }
 
-            return t - RISE_STEP_MS + ratio * RISE_STEP_MS;
+        if (set === null && previous >= 0 && next < 0) {
+            set = t - RISE_STEP_MS + (previous / (previous - next)) * RISE_STEP_MS;
         }
 
         previous = next;
     }
 
-    return null;
+    return { rise, set };
 }
 
 function findNextFullMoon(nowMs: number): number {
@@ -236,16 +245,155 @@ export function getMoonInfo({
     const { illumination, phase } = moonIllumination(nowMs);
 
     const dayStartMs = Date.parse(`${date}T00:00Z`) - utcOffsetSeconds * 1000;
-    const moonriseMs = findMoonrise(dayStartMs, latitude, longitude);
+    const { rise } = findMoonEvents(dayStartMs, latitude, longitude);
 
     return {
         phase,
         illumination,
         name: getPhaseName(phase),
-        moonrise:
-            moonriseMs === null
-                ? null
-                : formatLocalTime(moonriseMs, utcOffsetSeconds),
+        moonrise: rise === null ? null : formatLocalTime(rise, utcOffsetSeconds),
         daysToFullMoon: (findNextFullMoon(nowMs) - nowMs) / DAY_MS,
     };
+}
+
+export type MoonSnapshotInput = {
+    /** The instant to show, in UTC milliseconds. */
+    ms: number;
+    /** Offset of the local time zone at that instant, in seconds. */
+    utcOffsetSeconds: number;
+    latitude: number;
+    longitude: number;
+};
+
+export type MoonSnapshot = {
+    illumination: number;
+    phase: number;
+    /** Phase name, e.g. "Waxing Crescent". */
+    name: string;
+    /** Moonrise and moonset of the local day of the instant (UTC ms). */
+    moonrise: number | null;
+    moonset: number | null;
+    daysToFullMoon: number;
+    distanceKm: number;
+    /** Direction of the lit side, in degrees clockwise from the zenith (up). */
+    litAngle: number;
+    /** Degrees clockwise to rotate a photo of the moon (lunar north up). */
+    photoRotation: number;
+};
+
+function titleCase(text: string): string {
+    return text
+        .toLowerCase()
+        .replace(/(^|\s)\S/g, (letter) => letter.toUpperCase());
+}
+
+/** Azimuth (from south, towards west) and altitude of a body, in radians. */
+function horizontal(
+    ra: number,
+    dec: number,
+    ms: number,
+    latitude: number,
+    longitude: number
+) {
+    const days = toDays(ms);
+    const phi = RAD * latitude;
+    const hourAngle =
+        RAD * (280.16 + 360.9856235 * days) - RAD * -longitude - ra;
+
+    return {
+        azimuth: Math.atan2(
+            Math.sin(hourAngle),
+            Math.cos(hourAngle) * Math.sin(phi) - Math.tan(dec) * Math.cos(phi)
+        ),
+        altitude: Math.asin(
+            Math.sin(phi) * Math.sin(dec) +
+                Math.cos(phi) * Math.cos(dec) * Math.cos(hourAngle)
+        ),
+    };
+}
+
+/**
+ * Everything the moon popover shows for one instant. The orientation comes from
+ * the sky geometry: the lit side points at the sun, whose direction seen from
+ * the moon is measured against the vertical of the observer.
+ */
+export function getMoonSnapshot({
+    ms,
+    utcOffsetSeconds,
+    latitude,
+    longitude,
+}: MoonSnapshotInput): MoonSnapshot {
+    const { illumination, phase, angle } = moonIllumination(ms);
+
+    const days = toDays(ms);
+    const sun = sunCoordinates(days);
+    const moon = moonCoordinates(days);
+    const sunSky = horizontal(sun.ra, sun.dec, ms, latitude, longitude);
+    const moonSky = horizontal(moon.ra, moon.dec, ms, latitude, longitude);
+
+    const deltaAzimuth = sunSky.azimuth - moonSky.azimuth;
+    const litAngle =
+        Math.atan2(
+            Math.sin(deltaAzimuth) * Math.cos(sunSky.altitude),
+            Math.cos(moonSky.altitude) * Math.sin(sunSky.altitude) -
+                Math.sin(moonSky.altitude) *
+                    Math.cos(sunSky.altitude) *
+                    Math.cos(deltaAzimuth)
+        ) * DEG;
+
+    const offsetMs = utcOffsetSeconds * 1000;
+    const dayStartMs = Math.floor((ms + offsetMs) / DAY_MS) * DAY_MS - offsetMs;
+    const events = findMoonEvents(dayStartMs, latitude, longitude);
+
+    return {
+        illumination,
+        phase,
+        name: titleCase(getPhaseName(phase)),
+        moonrise: events.rise,
+        moonset: events.set,
+        daysToFullMoon: (findNextFullMoon(ms) - ms) / DAY_MS,
+        distanceKm: moon.distance,
+        litAngle,
+        photoRotation: litAngle + angle * DEG,
+    };
+}
+
+/** Cheap data for the small phase icons of the calendar. */
+export function getMoonGlyph(ms: number): {
+    illumination: number;
+    waxing: boolean;
+} {
+    const { illumination, phase } = moonIllumination(ms);
+
+    return { illumination, waxing: phase < 0.5 };
+}
+
+/** New moons and full moons (UTC ms) between two instants. */
+export function findMoonPhases(
+    startMs: number,
+    endMs: number
+): { newMoons: number[]; fullMoons: number[] } {
+    const newMoons: number[] = [];
+    const fullMoons: number[] = [];
+
+    let previous = moonIllumination(startMs).illumination;
+    let current = moonIllumination(startMs + HOUR_MS).illumination;
+
+    for (let t = startMs + 2 * HOUR_MS; t <= endMs; t += HOUR_MS) {
+        const next = moonIllumination(t).illumination;
+
+        // Local extremes of the illuminated fraction.
+        if (current <= previous && current < next && current < 0.03) {
+            newMoons.push(t - HOUR_MS);
+        }
+
+        if (current >= previous && current > next && current > 0.97) {
+            fullMoons.push(t - HOUR_MS);
+        }
+
+        previous = current;
+        current = next;
+    }
+
+    return { newMoons, fullMoons };
 }

@@ -25,101 +25,117 @@ import VisibilityCard from "@/components/weather/VisibilityCard";
 import WeatherBackground from "@/components/weather/WeatherBackground";
 import { WeatherLoadingContext } from "@/components/weather/WeatherLoadingContext";
 import WindCard from "@/components/weather/WindCard";
-import { useAirQuality } from "@/hooks/useAirQuality";
-import { useClimateAverage } from "@/hooks/useClimateAverage";
-import { useWeather } from "@/hooks/useWeather";
-import type { City } from "@/lib/cities";
 import AirQualityPopover from "@/components/weather/popover/AirQualityPopover";
 import HumidityPopover from "@/components/weather/popover/HumidityPopover";
 import PrecipitationPopover from "@/components/weather/popover/PrecipitationPopover";
 import WindPopover from "@/components/weather/popover/WindPopover";
+import { useAirQuality } from "@/hooks/useAirQuality";
+import { useClimateNormals } from "@/hooks/useClimateNormals";import { useWeather } from "@/hooks/useWeather";
+import type { City } from "@/lib/cities";
+import { useEffect, useState } from "react";
+import AveragesPopover from "@/components/weather/popover/AveragesPopover";
+import MoonPopover from "@/components/weather/popover/MoonPopover";
+import SunrisePopover from "@/components/weather/popover/SunrisePopover";
 
-/*
- * Layout breakpoints are container queries on the width of the content column
- * (so they keep working when the sidebar takes space):
- *  - the column is capped at 624px from 624px of available width, and at 944px
- *    from 944px (the <main> container);
- *  - inside the column: below 624px = 2 columns (fluid cells, mobile),
- *    624px = 4 columns, 944px = 6 columns (fixed 144px cells).
- * The render order in the grid below is the mobile order (auto placement),
- * so keep it as is: wide cards first, then the small cards in pairs.
- * Larger layouts place every card explicitly.
- * Cards with a detail popover are wrapped in a DetailTrigger, which carries
- * the grid placement classes.
- */
 const tenDayClassName =
     "col-span-2 row-span-3 @min-[624px]:col-start-1 @min-[624px]:row-start-1";
-
 const mapClassName =
     "col-span-2 row-span-2 @min-[624px]:col-start-3 @min-[624px]:row-start-1 @min-[944px]:col-start-5";
-
 const airQualityClassName =
     "col-span-2 @min-[624px]:col-start-3 @min-[624px]:row-start-3 @min-[944px]:row-start-1";
-
 const windClassName =
     "col-span-2 @min-[624px]:col-start-3 @min-[624px]:row-start-4 @min-[624px]:-my-[calc(var(--cell)_*_0.08)] @min-[944px]:row-start-2";
-
 const moonClassName =
     "col-span-2 @min-[624px]:col-start-1 @min-[624px]:row-start-4";
-
 const uvIndexClassName =
     "@min-[624px]:col-start-1 @min-[624px]:row-start-5 @min-[944px]:col-start-3 @min-[944px]:row-start-3";
-
 const sunriseClassName =
     "@min-[624px]:col-start-2 @min-[624px]:row-start-5 @min-[944px]:col-start-4 @min-[944px]:row-start-3";
-
 const feelsLikeClassName =
     "@min-[624px]:col-start-3 @min-[624px]:row-start-5 @min-[944px]:col-start-5 @min-[944px]:row-start-3";
-
 const precipitationClassName =
     "@min-[624px]:col-start-4 @min-[624px]:row-start-5 @min-[944px]:col-start-6 @min-[944px]:row-start-3";
-
 const visibilityClassName =
     "@min-[624px]:col-start-1 @min-[624px]:row-start-6 @min-[944px]:col-start-4 @min-[944px]:row-start-4";
-
 const humidityClassName =
     "@min-[624px]:col-start-2 @min-[624px]:row-start-6 @min-[944px]:col-start-3 @min-[944px]:row-start-4";
-
 const pressureClassName =
     "@min-[624px]:col-start-3 @min-[624px]:row-start-6 @min-[944px]:col-start-5 @min-[944px]:row-start-4";
-
 const averagesClassName =
     "@min-[624px]:col-start-4 @min-[624px]:row-start-6 @min-[944px]:col-start-6 @min-[944px]:row-start-4";
 
-// Date of the clicked 10-day row (rows carry data-date), if any.
 function clickedDate(target: HTMLElement): string | undefined {
     return target.closest<HTMLElement>("[data-date]")?.dataset.date;
 }
 
 type WeatherDashboardProps = {
     city: City;
+    pendingCity?: City | null;
+    onCityReady?: (city: City, videoSrc: string) => void;
 };
 
-export default function WeatherDashboard({ city }: WeatherDashboardProps) {
-    const { current, forecast, daily, details, loading, error } = useWeather(city);
+export default function WeatherDashboard({
+    city,
+    pendingCity = null,
+    onCityReady,
+}: WeatherDashboardProps) {
+    const [readyVideoSrc, setReadyVideoSrc] = useState<string | null>(null);
+
+    const {
+        current,
+        forecast,
+        daily,
+        details,
+        loading,
+        error,
+    } = useWeather(city);
+
     const {
         airQuality,
         loading: airQualityLoading,
         error: airQualityError,
     } = useAirQuality(city);
-    const todayDate = daily[0]?.date ?? null;
-    const {
-        average: climateAverage,
-        loading: climateLoading,
-        error: climateError,
-    } = useClimateAverage(todayDate, city);
 
-    // The detail popovers need the whole data set.
-    const popoverReady = details !== null && current !== null && todayDate !== null;
+    const todayDate = daily[0]?.date ?? null;
+
+    const normals = useClimateNormals(todayDate, city);
+
+    const {
+        current: pendingCurrent,
+        loading: pendingLoading,
+    } = useWeather(pendingCity ?? city);
+
+    const popoverReady =
+        details !== null && current !== null && todayDate !== null;
+
+    useEffect(() => {
+        if (
+            !pendingCity ||
+            pendingLoading ||
+            !pendingCurrent ||
+            !readyVideoSrc ||
+            !onCityReady
+        ) {
+            return;
+        }
+
+        onCityReady(pendingCity, readyVideoSrc);
+    }, [
+        pendingCity,
+        pendingLoading,
+        pendingCurrent,
+        readyVideoSrc,
+        onCityReady,
+    ]);
 
     return (
         <WeatherLoadingContext.Provider value={loading}>
             <WeatherIconProvider>
-
                 <WeatherBackground
                     weatherCode={current?.weatherCode ?? null}
                     isDay={current?.isDay ?? true}
                     cloudCover={current?.cloudCover ?? null}
+                    onReady={setReadyVideoSrc}
                 />
 
                 <main className="@container relative z-10 px-4 py-6">
@@ -146,11 +162,9 @@ export default function WeatherDashboard({ city }: WeatherDashboardProps) {
                                     <p className="mt-1 text-[96px] leading-none font-extralight">
                                         {Math.round(current.temperature)}°
                                     </p>
-
                                     <p className="mt-2 text-xl">
                                         {current.condition}
                                     </p>
-
                                     <p className="text-xl">
                                         H:{Math.round(current.max)}° L:{Math.round(current.min)}°
                                     </p>
@@ -215,11 +229,7 @@ export default function WeatherDashboard({ city }: WeatherDashboardProps) {
                                 />
                             </DetailTrigger>
 
-                            <MapCard
-                                city={city}
-                                current={current}
-                                className={mapClassName}
-                            />
+                            <MapCard city={city} current={current} className={mapClassName} />
 
                             <DetailTrigger
                                 label="Show air quality details"
@@ -258,13 +268,25 @@ export default function WeatherDashboard({ city }: WeatherDashboardProps) {
                                     ) : null
                                 }
                             >
-                                <WindCard
-                                    current={current}
-                                    loading={loading}
-                                    error={error}
-                                />
+                                <WindCard current={current} loading={loading} error={error} />
                             </DetailTrigger>
 
+                                                    <DetailTrigger
+                            label="Show moon details"
+                            disabled={!current}
+                            className={moonClassName}
+                            popover={({ anchor, close }) =>
+                                current ? (
+                                    <MoonPopover
+                                        anchor={anchor}
+                                        onClose={close}
+                                        current={current}
+                                        latitude={city.latitude}
+                                        longitude={city.longitude}
+                                    />
+                                ) : null
+                            }
+                        >
                             <MoonCard
                                 current={current}
                                 date={todayDate}
@@ -272,8 +294,8 @@ export default function WeatherDashboard({ city }: WeatherDashboardProps) {
                                 longitude={city.longitude}
                                 loading={loading}
                                 error={error}
-                                className={moonClassName}
                             />
+                        </DetailTrigger>
 
                             <DetailTrigger
                                 label="Show UV index details"
@@ -291,20 +313,33 @@ export default function WeatherDashboard({ city }: WeatherDashboardProps) {
                                     ) : null
                                 }
                             >
-                                <UVIndexCard
-                                    current={current}
-                                    loading={loading}
-                                    error={error}
-                                />
+                                <UVIndexCard current={current} loading={loading} error={error} />
                             </DetailTrigger>
 
+                                                    <DetailTrigger
+                            label="Show sunrise and sunset details"
+                            disabled={!popoverReady}
+                            className={sunriseClassName}
+                            popover={({ anchor, close }) =>
+                                details && current ? (
+                                    <SunrisePopover
+                                        anchor={anchor}
+                                        onClose={close}
+                                        details={details}
+                                        current={current}
+                                        latitude={city.latitude}
+                                        longitude={city.longitude}
+                                    />
+                                ) : null
+                            }
+                        >
                             <SunriseCard
                                 current={current}
                                 forecast={forecast}
                                 loading={loading}
                                 error={error}
-                                className={sunriseClassName}
                             />
+                        </DetailTrigger>
 
                             <DetailTrigger
                                 label="Show feels like details"
@@ -323,11 +358,7 @@ export default function WeatherDashboard({ city }: WeatherDashboardProps) {
                                     ) : null
                                 }
                             >
-                                <FeelsLikeCard
-                                    current={current}
-                                    loading={loading}
-                                    error={error}
-                                />
+                                <FeelsLikeCard current={current} loading={loading} error={error} />
                             </DetailTrigger>
 
                             <DetailTrigger
@@ -346,11 +377,7 @@ export default function WeatherDashboard({ city }: WeatherDashboardProps) {
                                     ) : null
                                 }
                             >
-                                <PrecipitationCard
-                                    current={current}
-                                    loading={loading}
-                                    error={error}
-                                />
+                                <PrecipitationCard current={current} loading={loading} error={error} />
                             </DetailTrigger>
 
                             <DetailTrigger
@@ -369,11 +396,7 @@ export default function WeatherDashboard({ city }: WeatherDashboardProps) {
                                     ) : null
                                 }
                             >
-                                <VisibilityCard
-                                    current={current}
-                                    loading={loading}
-                                    error={error}
-                                />
+                                <VisibilityCard current={current} loading={loading} error={error} />
                             </DetailTrigger>
 
                             <DetailTrigger
@@ -392,11 +415,7 @@ export default function WeatherDashboard({ city }: WeatherDashboardProps) {
                                     ) : null
                                 }
                             >
-                                <HumidityCard
-                                    current={current}
-                                    loading={loading}
-                                    error={error}
-                                />
+                                <HumidityCard current={current} loading={loading} error={error} />
                             </DetailTrigger>
 
                             <DetailTrigger
@@ -415,25 +434,36 @@ export default function WeatherDashboard({ city }: WeatherDashboardProps) {
                                     ) : null
                                 }
                             >
-                                <PressureCard
-                                    current={current}
-                                    loading={loading}
-                                    error={error}
-                                />
+                                <PressureCard current={current} loading={loading} error={error} />
                             </DetailTrigger>
 
+                                                    <DetailTrigger
+                            label="Show averages details"
+                            disabled={!popoverReady}
+                            className={averagesClassName}
+                            popover={({ anchor, close }) =>
+                                details && current ? (
+                                    <AveragesPopover
+                                        anchor={anchor}
+                                        onClose={close}
+                                        city={city}
+                                        details={details}
+                                        current={current}
+                                        normals={normals.data}
+                                    />
+                                ) : null
+                            }
+                        >
                             <AveragesCard
                                 today={current?.max ?? null}
-                                average={climateAverage}
-                                loading={loading || climateLoading}
-                                error={error ?? climateError}
-                                className={averagesClassName}
+                                average={normals.data?.averageHigh ?? null}
+                                loading={loading || normals.loading}
+                                error={error ?? normals.error}
                             />
+                        </DetailTrigger>
                         </section>
 
                         <WeatherIconStyleToggle />
-
-                       
                     </div>
                 </main>
             </WeatherIconProvider>

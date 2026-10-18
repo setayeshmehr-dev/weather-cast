@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -25,11 +26,12 @@ export type DailyItem = {
     max: number;
     weatherCode: number;
     precipitationChance: number;
+    sunrise: string;
+    sunset: string;
 };
 
 export type PressureTrend = "rising" | "falling" | "steady";
 
-/** One hour of the detailed series used by the detail popovers. */
 export type HourlyPoint = {
     time: string;
     temperature: number;
@@ -48,7 +50,6 @@ export type HourlyPoint = {
     dewPoint: number | null;
 };
 
-/** Yesterday, today and the next days, hour by hour. */
 export type WeatherDetails = {
     hours: HourlyPoint[];
     days: DailyItem[];
@@ -58,6 +59,7 @@ export type WeatherDetails = {
 export type CurrentWeather = {
     time: string;
     utcOffsetSeconds: number;
+    timezone: string;
     temperature: number;
     feelsLike: number;
     pressure: number;
@@ -81,6 +83,7 @@ export type CurrentWeather = {
 
 type OpenMeteoResponse = {
     utc_offset_seconds: number;
+    timezone: string;
     current: {
         time: string;
         temperature_2m: number;
@@ -131,11 +134,16 @@ type WeatherState = {
     error: string | null;
 };
 
-// Pressure change (hPa) over 3 hours from which the trend is rising or falling.
+type ProcessedWeather = Omit<WeatherState, "key">;
+
 const PRESSURE_TREND_THRESHOLD = 1;
 
 const EMPTY_FORECAST: ForecastItem[] = [];
 const EMPTY_DAILY: DailyItem[] = [];
+
+const weatherRequests = new Map<string, Promise<OpenMeteoResponse>>();
+const weatherCache = new Map<string, OpenMeteoResponse>();
+const processedWeatherCache = new Map<string, ProcessedWeather>();
 
 export function getWeatherCondition(code: number): string {
     if (code === 0) return "Clear sky";
@@ -171,7 +179,7 @@ function getCurrentHourIndex(times: string[], currentTime: string): number {
 
     times.forEach((time, index) => {
         const difference = Math.abs(
-            new Date(time).getTime() - new Date(currentTime).getTime()
+            new Date(time).getTime() - new Date(currentTime).getTime(),
         );
 
         if (Number.isFinite(difference) && difference < smallestDifference) {
@@ -183,167 +191,232 @@ function getCurrentHourIndex(times: string[], currentTime: string): number {
     return closestIndex;
 }
 
-export function useWeather(city: City) {
-    const { id: key, latitude, longitude } = city;
+function getWeatherRequest(city: City): Promise<OpenMeteoResponse> {
+    const cached = weatherCache.get(city.id);
+    if (cached) return Promise.resolve(cached);
 
-    const [state, setState] = useState<WeatherState | null>(null);
+    const existing = weatherRequests.get(city.id);
+    if (existing) return existing;
+
+    const params = new URLSearchParams({
+        latitude: String(city.latitude),
+        longitude: String(city.longitude),
+        current:
+            "temperature_2m,apparent_temperature,pressure_msl,weather_code,is_day,wind_speed_10m,wind_gusts_10m,wind_direction_10m,uv_index,cloud_cover",
+        hourly:
+            "temperature_2m,apparent_temperature,weather_code,is_day,relative_humidity_2m,dew_point_2m,visibility,precipitation,precipitation_probability,pressure_msl,uv_index,wind_speed_10m,wind_gusts_10m,wind_direction_10m",
+        daily:
+            "sunrise,sunset,temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max",
+        past_days: "1",
+        forecast_days: "10",
+        timezone: "auto",
+    });
+
+    const request = fetch(
+        `https://api.open-meteo.com/v1/forecast?${params.toString()}`,
+    )
+        .then(async (response) => {
+            if (!response.ok) {
+                throw new Error("Failed to fetch weather.");
+            }
+
+            const data = (await response.json()) as OpenMeteoResponse;
+
+            if (!data.current || !data.hourly || !data.daily) {
+                throw new Error("Invalid weather response.");
+            }
+
+            weatherCache.set(city.id, data);
+            return data;
+        })
+        .finally(() => {
+            weatherRequests.delete(city.id);
+        });
+
+    weatherRequests.set(city.id, request);
+    return request;
+}
+
+function processWeather(data: OpenMeteoResponse): ProcessedWeather {
+    const currentTime = data.current.time;
+    const currentDate = currentTime.slice(0, 10);
+    const dayIndex = data.daily.sunrise.findIndex(
+        (time) => time.slice(0, 10) === currentDate,
+    );
+
+    if (dayIndex < 0) {
+        throw new Error("Daily weather data is unavailable.");
+    }
+
+    const currentHourIndex = getCurrentHourIndex(
+        data.hourly.time,
+        currentTime,
+    );
+
+    if (currentHourIndex < 0) {
+        throw new Error("Current hourly weather data is unavailable.");
+    }
+
+    const lastHourIndex = data.hourly.time.indexOf(
+        `${currentTime.slice(0, 13)}:00`,
+    );
+
+    if (lastHourIndex < 24) {
+        throw new Error("Incomplete hourly data.");
+    }
+
+    const sumPrecipitation = (from: number, to: number) =>
+        data.hourly.precipitation
+            .slice(from, to)
+            .reduce<number>((sum, value) => sum + (value ?? 0), 0);
+
+    const pressureBefore = data.hourly.pressure_msl[lastHourIndex - 3];
+    const pressureChange =
+        pressureBefore === null || pressureBefore === undefined
+            ? 0
+            : data.current.pressure_msl - pressureBefore;
+
+    const pressureTrend: PressureTrend =
+        pressureChange >= PRESSURE_TREND_THRESHOLD
+            ? "rising"
+            : pressureChange <= -PRESSURE_TREND_THRESHOLD
+                ? "falling"
+                : "steady";
+
+    const current: CurrentWeather = {
+        time: currentTime,
+        utcOffsetSeconds: data.utc_offset_seconds,
+        timezone: data.timezone,
+        temperature: data.current.temperature_2m,
+        feelsLike: data.current.apparent_temperature,
+        pressure: data.current.pressure_msl,
+        pressureTrend,
+        precipitationLast24h: sumPrecipitation(
+            lastHourIndex - 23,
+            lastHourIndex + 1,
+        ),
+        precipitationNext24h: sumPrecipitation(
+            lastHourIndex + 1,
+            lastHourIndex + 25,
+        ),
+        weatherCode: data.current.weather_code,
+        isDay: data.current.is_day === 1,
+        condition: getWeatherCondition(data.current.weather_code),
+        max: data.daily.temperature_2m_max[dayIndex],
+        min: data.daily.temperature_2m_min[dayIndex],
+        windSpeed: data.current.wind_speed_10m,
+        windGusts: data.current.wind_gusts_10m,
+        windDirection: data.current.wind_direction_10m,
+        relativeHumidity: data.hourly.relative_humidity_2m[currentHourIndex],
+        dewPoint: data.hourly.dew_point_2m[currentHourIndex],
+        visibility: data.hourly.visibility[currentHourIndex],
+        uvIndex: data.current.uv_index ?? null,
+        cloudCover: data.current.cloud_cover ?? null,
+    };
+
+    const hours: HourlyItem[] = data.hourly.time
+        .map((time, index) => ({
+            kind: "hour" as const,
+            time,
+            temperature: data.hourly.temperature_2m[index],
+            weatherCode: data.hourly.weather_code[index],
+            isDay: data.hourly.is_day[index] === 1,
+        }))
+        .filter(
+            (hour) =>
+                hour.time > currentTime &&
+                Number.isFinite(hour.temperature) &&
+                Number.isFinite(hour.weatherCode),
+        )
+        .slice(0, 24);
+
+    const sunrise = data.daily.sunrise.find((time) => time > currentTime);
+    const sunset = data.daily.sunset.find((time) => time > currentTime);
+
+    if (hours.length !== 24 || !sunrise || !sunset) {
+        throw new Error("Incomplete forecast data.");
+    }
+
+    const events: SunEvent[] = [
+        { kind: "sunrise", time: sunrise },
+        { kind: "sunset", time: sunset },
+    ];
+
+    const allDays: DailyItem[] = data.daily.time.map((date, index) => ({
+        date,
+        min: data.daily.temperature_2m_min[index],
+        max: data.daily.temperature_2m_max[index],
+        weatherCode: data.daily.weather_code[index],
+        precipitationChance:
+            data.daily.precipitation_probability_max[index] ?? 0,
+            sunrise: data.daily.sunrise[index],
+            sunset: data.daily.sunset[index],
+    }));
+
+    const details: WeatherDetails = {
+        hours: data.hourly.time.map((time, index) => ({
+            time,
+            temperature: data.hourly.temperature_2m[index],
+            apparentTemperature: data.hourly.apparent_temperature[index],
+            weatherCode: data.hourly.weather_code[index],
+            isDay: data.hourly.is_day[index] === 1,
+            precipitation: data.hourly.precipitation[index] ?? 0,
+            precipitationChance:
+                data.hourly.precipitation_probability[index] ?? 0,
+            uvIndex: data.hourly.uv_index[index] ?? 0,
+            pressure: data.hourly.pressure_msl[index],
+            visibility: data.hourly.visibility[index],
+            windSpeed: data.hourly.wind_speed_10m[index] ?? 0,
+            windGusts: data.hourly.wind_gusts_10m[index] ?? 0,
+            windDirection: data.hourly.wind_direction_10m[index] ?? 0,
+            relativeHumidity: data.hourly.relative_humidity_2m[index],
+            dewPoint: data.hourly.dew_point_2m[index],
+        })),
+        days: allDays,
+        todayIndex: dayIndex,
+    };
+
+    return {
+        current,
+        forecast: [...hours, ...events].sort((a, b) =>
+            a.time.localeCompare(b.time),
+        ),
+        daily: allDays.slice(dayIndex),
+        details,
+        error: null,
+    };
+}
+
+export async function preloadWeather(city: City): Promise<ProcessedWeather> {
+    const cached = processedWeatherCache.get(city.id);
+    if (cached) return cached;
+
+    const data = await getWeatherRequest(city);
+    const weather = processWeather(data);
+
+    processedWeatherCache.set(city.id, weather);
+    return weather;
+}
+
+export function useWeather(city: City) {
+    const { id: key } = city;
+    const [state, setState] = useState<WeatherState | null>(() => {
+        const cached = processedWeatherCache.get(key);
+        return cached ? { ...cached, key } : null;
+    });
 
     useEffect(() => {
-        const controller = new AbortController();
+        let cancelled = false;
 
         async function fetchWeather() {
             try {
-                const api =
-                    "https://api.open-meteo.com/v1/forecast" +
-                    `?latitude=${latitude}&longitude=${longitude}` +
-                    "&current=temperature_2m,apparent_temperature,pressure_msl,weather_code,is_day,wind_speed_10m,wind_gusts_10m,wind_direction_10m,uv_index,cloud_cover" +
-                    "&hourly=temperature_2m,apparent_temperature,weather_code,is_day,relative_humidity_2m,dew_point_2m,visibility,precipitation,precipitation_probability,pressure_msl,uv_index,wind_speed_10m,wind_gusts_10m,wind_direction_10m" +
-                    "&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max" +
-                    "&past_days=1&forecast_days=10&timezone=auto";
+                const weather = await preloadWeather(city);
 
-                const response = await fetch(api, { signal: controller.signal });
-                if (!response.ok) throw new Error("Failed to fetch weather.");
-
-                const data = (await response.json()) as OpenMeteoResponse;
-                const currentTime = data.current.time;
-                const currentDate = currentTime.slice(0, 10);
-                const dayIndex = data.daily.sunrise.findIndex(
-                    (time) => time.slice(0, 10) === currentDate
-                );
-
-                if (dayIndex < 0) {
-                    throw new Error("Daily weather data is unavailable.");
+                if (!cancelled) {
+                    setState({ ...weather, key });
                 }
-
-                // Closest hour: used for instant values (humidity, dew point, visibility).
-                const currentHourIndex = getCurrentHourIndex(
-                    data.hourly.time,
-                    currentTime
-                );
-
-                if (currentHourIndex < 0) {
-                    throw new Error("Current hourly weather data is unavailable.");
-                }
-
-                // Last completed hour: precipitation and pressure are indexed by hour,
-                // and the hourly arrays start yesterday (past_days=1).
-                const lastHourIndex = data.hourly.time.indexOf(
-                    `${currentTime.slice(0, 13)}:00`
-                );
-
-                if (lastHourIndex < 24) {
-                    throw new Error("Incomplete hourly data.");
-                }
-
-                const sumPrecipitation = (from: number, to: number) =>
-                    data.hourly.precipitation
-                        .slice(from, to)
-                        .reduce<number>((sum, value) => sum + (value ?? 0), 0);
-
-                const pressureBefore = data.hourly.pressure_msl[lastHourIndex - 3];
-                const pressureChange =
-                    pressureBefore === null || pressureBefore === undefined
-                        ? 0
-                        : data.current.pressure_msl - pressureBefore;
-
-                const pressureTrend: PressureTrend =
-                    pressureChange >= PRESSURE_TREND_THRESHOLD
-                        ? "rising"
-                        : pressureChange <= -PRESSURE_TREND_THRESHOLD
-                            ? "falling"
-                            : "steady";
-
-                const weather: CurrentWeather = {
-                    time: currentTime,
-                    utcOffsetSeconds: data.utc_offset_seconds,
-                    temperature: data.current.temperature_2m,
-                    feelsLike: data.current.apparent_temperature,
-                    pressure: data.current.pressure_msl,
-                    pressureTrend,
-                    precipitationLast24h: sumPrecipitation(lastHourIndex - 23, lastHourIndex + 1),
-                    precipitationNext24h: sumPrecipitation(lastHourIndex + 1, lastHourIndex + 25),
-                    weatherCode: data.current.weather_code,
-                    isDay: data.current.is_day === 1,
-                    condition: getWeatherCondition(data.current.weather_code),
-                    max: data.daily.temperature_2m_max[dayIndex],
-                    min: data.daily.temperature_2m_min[dayIndex],
-                    windSpeed: data.current.wind_speed_10m,
-                    windGusts: data.current.wind_gusts_10m,
-                    windDirection: data.current.wind_direction_10m,
-                    relativeHumidity: data.hourly.relative_humidity_2m[currentHourIndex],
-                    dewPoint: data.hourly.dew_point_2m[currentHourIndex],
-                    visibility: data.hourly.visibility[currentHourIndex],
-                    uvIndex: data.current.uv_index ?? null,
-                    cloudCover: data.current.cloud_cover ?? null,
-                };
-
-                const hours: HourlyItem[] = data.hourly.time
-                    .map((time, index) => ({
-                        kind: "hour" as const,
-                        time,
-                        temperature: data.hourly.temperature_2m[index],
-                        weatherCode: data.hourly.weather_code[index],
-                        isDay: data.hourly.is_day[index] === 1,
-                    }))
-                    .filter((hour) =>
-                        hour.time > currentTime &&
-                        Number.isFinite(hour.temperature) &&
-                        Number.isFinite(hour.weatherCode)
-                    )
-                    .slice(0, 24);
-
-                const sunrise = data.daily.sunrise.find((time) => time > currentTime);
-                const sunset = data.daily.sunset.find((time) => time > currentTime);
-
-                if (hours.length !== 24 || !sunrise || !sunset) {
-                    throw new Error("Incomplete forecast data.");
-                }
-
-                const events: SunEvent[] = [
-                    { kind: "sunrise", time: sunrise },
-                    { kind: "sunset", time: sunset },
-                ];
-
-                const allDays: DailyItem[] = data.daily.time.map((date, index) => ({
-                    date,
-                    min: data.daily.temperature_2m_min[index],
-                    max: data.daily.temperature_2m_max[index],
-                    weatherCode: data.daily.weather_code[index],
-                    precipitationChance: data.daily.precipitation_probability_max[index] ?? 0,
-                }));
-
-                const details: WeatherDetails = {
-                    hours: data.hourly.time.map((time, index) => ({
-                        time,
-                        temperature: data.hourly.temperature_2m[index],
-                        apparentTemperature: data.hourly.apparent_temperature[index],
-                        weatherCode: data.hourly.weather_code[index],
-                        isDay: data.hourly.is_day[index] === 1,
-                        precipitation: data.hourly.precipitation[index] ?? 0,
-                        precipitationChance: data.hourly.precipitation_probability[index] ?? 0,
-                        uvIndex: data.hourly.uv_index[index] ?? 0,
-                        pressure: data.hourly.pressure_msl[index],
-                        visibility: data.hourly.visibility[index],
-                        windSpeed: data.hourly.wind_speed_10m[index] ?? 0,
-                        windGusts: data.hourly.wind_gusts_10m[index] ?? 0,
-                        windDirection: data.hourly.wind_direction_10m[index] ?? 0,
-                        relativeHumidity: data.hourly.relative_humidity_2m[index],
-                        dewPoint: data.hourly.dew_point_2m[index],
-                    })),
-                    days: allDays,
-                    todayIndex: dayIndex,
-                };
-
-                setState({
-                    key,
-                    current: weather,
-                    forecast: [...hours, ...events].sort((a, b) => a.time.localeCompare(b.time)),
-                    daily: allDays.slice(dayIndex),
-                    details,
-                    error: null,
-                });
             } catch {
-                if (!controller.signal.aborted) {
+                if (!cancelled) {
                     setState({
                         key,
                         current: null,
@@ -358,11 +431,12 @@ export function useWeather(city: City) {
 
         void fetchWeather();
 
-        return () => controller.abort();
-    }, [key, latitude, longitude]);
+        return () => {
+            cancelled = true;
+        };
+    }, [key, city]);
 
-    // Data of another city (or none yet) means we are still loading this one.
-    const result = state !== null && state.key === key ? state : null;
+    const result = state?.key === key ? state : null;
 
     return {
         current: result?.current ?? null,

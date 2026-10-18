@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -9,6 +10,7 @@ export type CitySummary = {
     temperature: number;
     weatherCode: number;
     isDay: boolean;
+    cloudCover: number;
     condition: string;
     max: number;
     min: number;
@@ -23,6 +25,7 @@ type ForecastResponse = {
         temperature_2m: number;
         weather_code: number;
         is_day: number;
+        cloud_cover: number;
     };
     daily: {
         temperature_2m_max: number[];
@@ -46,14 +49,13 @@ export function useCitySummaries(cities: City[]) {
                 const api =
                     "https://api.open-meteo.com/v1/forecast" +
                     `?latitude=${latitudes}&longitude=${longitudes}` +
-                    "&current=temperature_2m,weather_code,is_day" +
+                    "&current=temperature_2m,weather_code,is_day,cloud_cover" +
                     "&daily=temperature_2m_max,temperature_2m_min" +
                     "&forecast_days=1&timezone=auto";
 
                 const response = await fetch(api, { signal: controller.signal });
                 if (!response.ok) throw new Error("Failed to fetch city summaries.");
 
-                // One location returns an object, several locations return an array.
                 const json: unknown = await response.json();
                 const items = (Array.isArray(json) ? json : [json]) as ForecastResponse[];
 
@@ -64,6 +66,7 @@ export function useCitySummaries(cities: City[]) {
                         temperature: item.current.temperature_2m,
                         weatherCode: item.current.weather_code,
                         isDay: item.current.is_day === 1,
+                        cloudCover: item.current.cloud_cover,
                         condition: getWeatherCondition(item.current.weather_code),
                         max: item.daily.temperature_2m_max[0],
                         min: item.daily.temperature_2m_min[0],
@@ -74,7 +77,9 @@ export function useCitySummaries(cities: City[]) {
 
                 setSummaries((previous) => ({ ...previous, ...next }));
             } catch {
-                // Cards without data keep showing placeholders.
+                if (!controller.signal.aborted) {
+                    return;
+                }
             }
         }
 
