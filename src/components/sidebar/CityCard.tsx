@@ -1,3 +1,4 @@
+
 "use client";
 
 import { X } from "@phosphor-icons/react";
@@ -52,7 +53,7 @@ export default function CityCard({
                 type="button"
                 onClick={onSelect}
                 aria-current={selected ? "true" : undefined}
-                className={`relative flex h-24 w-full flex-col justify-between overflow-hidden rounded-2xl p-3 text-left text-white ${
+                className={`relative isolate flex h-24 w-full flex-col justify-between overflow-hidden rounded-2xl p-3 text-left text-white ${
                     selected ? "ring-2 ring-white/70" : ""
                 }`}
                 style={{
@@ -66,16 +67,16 @@ export default function CityCard({
                         name={getWeatherVideoName(
                             summary.weatherCode,
                             summary.isDay,
+                            summary.cloudCover,
                         )}
                         variant="card"
-                        className="absolute inset-0"
+                        className="z-0"
                     />
                 )}
 
-                {/* Keeps the text readable on top of the video. */}
-                <span className="absolute inset-0 bg-black/20" />
+                <span className="pointer-events-none absolute inset-0 z-10 bg-black/20" />
 
-                <div className="relative flex items-start justify-between gap-2">
+                <div className="relative z-20 flex items-start justify-between gap-2">
                     <div className="min-w-0">
                         <p className="truncate text-lg leading-tight font-semibold">
                             {city.name}
@@ -99,7 +100,7 @@ export default function CityCard({
                     )}
                 </div>
 
-                <div className="relative flex items-end justify-between gap-2 text-xs">
+                <div className="relative z-20 flex items-end justify-between gap-2 text-xs">
                     {summary ? (
                         <>
                             <span className="truncate">{summary.condition}</span>
@@ -121,7 +122,7 @@ export default function CityCard({
                     type="button"
                     onClick={onRemove}
                     aria-label={`Remove ${city.name}`}
-                    className="absolute -top-1.5 -left-1.5 z-10 hidden size-5 items-center justify-center rounded-full bg-black/60 text-white group-focus-within:flex group-hover:flex hover:bg-black/80"
+                    className="absolute -top-1.5 -left-1.5 z-30 hidden size-5 items-center justify-center rounded-full bg-black/60 text-white group-focus-within:flex group-hover:flex hover:bg-black/80"
                 >
                     <X size={11} weight="bold" />
                 </button>

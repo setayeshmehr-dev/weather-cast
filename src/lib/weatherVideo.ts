@@ -38,7 +38,7 @@ export function getWeatherVideoUrls(name: string) {
     return {
         page: `/videos/${name}.webm`,
         card: `/videos/card/${name}.webm`,
-        poster: `/videos/poster/${name}.webp`,
-        cardPoster: `/videos/poster/card/${name}.webp`,
+        poster: `/videos/poster/${name}.jpg`,
+        cardPoster: `/videos/poster/card/${name}.jpg`,
     };
 }
