@@ -152,7 +152,7 @@ export default function MoonPopover({
                     illumination={snapshot.illumination}
                     litAngle={snapshot.litAngle}
                     photoRotation={snapshot.photoRotation}
-                    className="size-[200px]"
+                    className="size-50"
                 />
             </div>
 

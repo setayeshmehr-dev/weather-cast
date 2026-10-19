@@ -124,9 +124,9 @@ export default function MoonScrubber({
             onPointerCancel={() => {
                 drag.current = null;
             }}
-            className="relative h-[72px] cursor-grab touch-pan-y select-none outline-none active:cursor-grabbing"
+            className="relative h-18 cursor-grab touch-pan-y select-none outline-none active:cursor-grabbing"
         >
-            <div className="absolute inset-0 overflow-hidden [mask-image:linear-gradient(to_right,transparent,#000_12%,#000_88%,transparent)]">
+            <div className="absolute inset-0 overflow-hidden mask-[linear-gradient(to_right,transparent,#000_12%,#000_88%,transparent)]">
                 <div className="absolute top-0 left-1/2 h-full w-0">
                     {ticks.map((tick) => (
                         <span

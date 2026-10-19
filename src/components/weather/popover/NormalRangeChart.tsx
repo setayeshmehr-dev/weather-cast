@@ -57,7 +57,7 @@ export default function NormalRangeChart({
     const peakHour = today.indexOf(highest);
 
     return (
-        <div className="relative rounded-xl border border-white/10 bg-white/[0.04] px-2 pt-2">
+        <div className="relative rounded-xl border border-white/10 bg-white/4 px-2 pt-2">
             <div className="pointer-events-none absolute top-3 left-4">
                 <p className="text-sm font-semibold">Today&apos;s High</p>
                 <p className="text-3xl leading-tight font-medium">
