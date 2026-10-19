@@ -220,7 +220,7 @@ export default function SunrisePopover({
 
             <div className="px-4 pb-3">
                 <div
-                    className="touch-pan-y rounded-xl border border-white/10 bg-white/[0.04] px-2 pt-2"
+                    className="touch-pan-y rounded-xl border border-white/10 bg-white/4 px-2 pt-2"
                     onPointerDown={(event) => {
                         event.currentTarget.setPointerCapture(event.pointerId);
                         handlePointer(event);
