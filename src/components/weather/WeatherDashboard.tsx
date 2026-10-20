@@ -30,9 +30,9 @@ import HumidityPopover from "@/components/weather/popover/HumidityPopover";
 import PrecipitationPopover from "@/components/weather/popover/PrecipitationPopover";
 import WindPopover from "@/components/weather/popover/WindPopover";
 import { useAirQuality } from "@/hooks/useAirQuality";
-import { useClimateNormals } from "@/hooks/useClimateNormals";import { useWeather } from "@/hooks/useWeather";
+import { useClimateNormals } from "@/hooks/useClimateNormals";
+import { useWeather } from "@/hooks/useWeather";
 import type { City } from "@/lib/cities";
-import { useEffect, useState } from "react";
 import AveragesPopover from "@/components/weather/popover/AveragesPopover";
 import MoonPopover from "@/components/weather/popover/MoonPopover";
 import SunrisePopover from "@/components/weather/popover/SunrisePopover";
@@ -70,25 +70,10 @@ function clickedDate(target: HTMLElement): string | undefined {
 
 type WeatherDashboardProps = {
     city: City;
-    pendingCity?: City | null;
-    onCityReady?: (city: City, videoSrc: string) => void;
 };
 
-export default function WeatherDashboard({
-    city,
-    pendingCity = null,
-    onCityReady,
-}: WeatherDashboardProps) {
-    const [readyVideoSrc, setReadyVideoSrc] = useState<string | null>(null);
-
-    const {
-        current,
-        forecast,
-        daily,
-        details,
-        loading,
-        error,
-    } = useWeather(city);
+export default function WeatherDashboard({ city }: WeatherDashboardProps) {
+    const { current, forecast, daily, details, loading, error } = useWeather(city);
 
     const {
         airQuality,
@@ -100,33 +85,8 @@ export default function WeatherDashboard({
 
     const normals = useClimateNormals(todayDate, city);
 
-    const {
-        current: pendingCurrent,
-        loading: pendingLoading,
-    } = useWeather(pendingCity ?? city);
-
     const popoverReady =
         details !== null && current !== null && todayDate !== null;
-
-    useEffect(() => {
-        if (
-            !pendingCity ||
-            pendingLoading ||
-            !pendingCurrent ||
-            !readyVideoSrc ||
-            !onCityReady
-        ) {
-            return;
-        }
-
-        onCityReady(pendingCity, readyVideoSrc);
-    }, [
-        pendingCity,
-        pendingLoading,
-        pendingCurrent,
-        readyVideoSrc,
-        onCityReady,
-    ]);
 
     return (
         <WeatherLoadingContext.Provider value={loading}>
@@ -135,7 +95,6 @@ export default function WeatherDashboard({
                     weatherCode={current?.weatherCode ?? null}
                     isDay={current?.isDay ?? true}
                     cloudCover={current?.cloudCover ?? null}
-                    onReady={setReadyVideoSrc}
                 />
 
                 <main className="@container relative z-10 px-4 py-6">

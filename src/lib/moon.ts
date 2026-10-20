@@ -317,13 +317,26 @@ function horizontal(
  * the sky geometry: the lit side points at the sun, whose direction seen from
  * the moon is measured against the vertical of the observer.
  */
-export function getMoonSnapshot({
-    ms,
-    utcOffsetSeconds,
-    latitude,
-    longitude,
-}: MoonSnapshotInput): MoonSnapshot {
-    const { illumination, phase, angle } = moonIllumination(ms);
+export type MoonAppearance = {
+    illumination: number;
+    /** Direction of the lit side, in degrees clockwise from the zenith (up). */
+    litAngle: number;
+    /** Degrees clockwise to rotate a photo of the moon (lunar north up). */
+    photoRotation: number;
+};
+
+/**
+ * The cheap part of the snapshot: what is needed to draw the moon. The
+ * orientation comes from the sky geometry: the lit side points at the sun,
+ * whose direction seen from the moon is measured against the vertical of the
+ * observer.
+ */
+export function getMoonAppearance(
+    ms: number,
+    latitude: number,
+    longitude: number
+): MoonAppearance {
+    const { illumination, angle } = moonIllumination(ms);
 
     const days = toDays(ms);
     const sun = sunCoordinates(days);
@@ -341,6 +354,23 @@ export function getMoonSnapshot({
                     Math.cos(deltaAzimuth)
         ) * DEG;
 
+    return { illumination, litAngle, photoRotation: litAngle + angle * DEG };
+}
+
+/** Everything the moon popover shows for one instant. */
+export function getMoonSnapshot({
+    ms,
+    utcOffsetSeconds,
+    latitude,
+    longitude,
+}: MoonSnapshotInput): MoonSnapshot {
+    const { illumination, litAngle, photoRotation } = getMoonAppearance(
+        ms,
+        latitude,
+        longitude
+    );
+    const { phase } = moonIllumination(ms);
+
     const offsetMs = utcOffsetSeconds * 1000;
     const dayStartMs = Math.floor((ms + offsetMs) / DAY_MS) * DAY_MS - offsetMs;
     const events = findMoonEvents(dayStartMs, latitude, longitude);
@@ -352,9 +382,9 @@ export function getMoonSnapshot({
         moonrise: events.rise,
         moonset: events.set,
         daysToFullMoon: (findNextFullMoon(ms) - ms) / DAY_MS,
-        distanceKm: moon.distance,
+        distanceKm: moonCoordinates(toDays(ms)).distance,
         litAngle,
-        photoRotation: litAngle + angle * DEG,
+        photoRotation,
     };
 }
 

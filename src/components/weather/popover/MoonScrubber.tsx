@@ -21,9 +21,9 @@ type Tick = {
 };
 
 type MoonScrubberProps = {
-    /** The selected instant (UTC ms), aligned to a local hour. */
-    time: number;
-    /** Hours from "now" (0 = now). */
+    /** "Now" at the start of the current local hour (UTC ms). */
+    baseMs: number;
+    /** Hours from "now"; it is continuous while dragging. */
     offsetHours: number;
     onOffsetChange: (offsetHours: number) => void;
     clock: LocalClock;
@@ -33,7 +33,7 @@ type MoonScrubberProps = {
 };
 
 export default function MoonScrubber({
-    time,
+    baseMs,
     offsetHours,
     onOffsetChange,
     clock,
@@ -55,10 +55,14 @@ export default function MoonScrubber({
         [timeZone]
     );
 
+    // Ticks sit on whole local hours; their position follows the exact time.
+    const exact = baseMs + offsetHours * HOUR_MS;
+    const aligned = baseMs + Math.round(offsetHours) * HOUR_MS;
+
     const ticks: Tick[] = [];
 
     for (let step = -SPAN_HOURS; step <= SPAN_HOURS; step++) {
-        const ms = time + step * HOUR_MS;
+        const ms = aligned + step * HOUR_MS;
         const minutes = clock.minutesOf(ms);
 
         if (minutes % 60 !== 0) continue;
@@ -68,8 +72,8 @@ export default function MoonScrubber({
         if (hour % 3 !== 0) continue;
 
         ticks.push({
-            key: step,
-            left: step * PX_PER_HOUR,
+            key: Math.round((ms - baseMs) / HOUR_MS),
+            left: ((ms - exact) / HOUR_MS) * PX_PER_HOUR,
             strong: hour === 0,
             label:
                 hour === 12 ? formatters.weekday.format(ms).toUpperCase() : null,
@@ -77,8 +81,7 @@ export default function MoonScrubber({
         });
     }
 
-    const clamp = (value: number) =>
-        Math.min(Math.max(Math.round(value), -MAX_OFFSET), MAX_OFFSET);
+    const clamp = (value: number) => Math.min(Math.max(value, -MAX_OFFSET), MAX_OFFSET);
 
     const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
         event.currentTarget.setPointerCapture(event.pointerId);
@@ -93,17 +96,26 @@ export default function MoonScrubber({
         onOffsetChange(clamp(drag.current.offset + hours));
     };
 
+    // On release the time settles on the nearest hour.
+    const handleRelease = () => {
+        if (!drag.current) return;
+
+        drag.current = null;
+        onOffsetChange(Math.round(offsetHours));
+    };
+
     const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
         const step = event.shiftKey ? 24 : 1;
+        const current = Math.round(offsetHours);
 
         if (event.key === "ArrowLeft") {
             event.preventDefault();
-            onOffsetChange(clamp(offsetHours - step));
+            onOffsetChange(clamp(current - step));
         }
 
         if (event.key === "ArrowRight") {
             event.preventDefault();
-            onOffsetChange(clamp(offsetHours + step));
+            onOffsetChange(clamp(current + step));
         }
     };
 
@@ -114,16 +126,12 @@ export default function MoonScrubber({
             aria-label="Date and time of the moon"
             aria-valuemin={-MAX_OFFSET}
             aria-valuemax={MAX_OFFSET}
-            aria-valuenow={offsetHours}
+            aria-valuenow={Math.round(offsetHours)}
             onKeyDown={handleKeyDown}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
-            onPointerUp={() => {
-                drag.current = null;
-            }}
-            onPointerCancel={() => {
-                drag.current = null;
-            }}
+            onPointerUp={handleRelease}
+            onPointerCancel={handleRelease}
             className="relative h-18 cursor-grab touch-pan-y select-none outline-none active:cursor-grabbing"
         >
             <div className="absolute inset-0 overflow-hidden mask-[linear-gradient(to_right,transparent,#000_12%,#000_88%,transparent)]">
@@ -132,9 +140,7 @@ export default function MoonScrubber({
                         <span
                             key={tick.key}
                             className={`absolute top-3 w-px -translate-x-1/2 ${
-                                tick.strong
-                                    ? "h-8 bg-white"
-                                    : "h-6 bg-white/35"
+                                tick.strong ? "h-8 bg-white" : "h-6 bg-white/35"
                             }`}
                             style={{ left: tick.left }}
                         />
@@ -168,7 +174,7 @@ export default function MoonScrubber({
             >
                 <path
                     d="M0 0 H14 L7 10 Z"
-                    fill={offsetHours === 0 ? "#5ac8fa" : "#ffffff"}
+                    fill={Math.round(offsetHours) === 0 ? "#5ac8fa" : "#ffffff"}
                 />
             </svg>
         </div>

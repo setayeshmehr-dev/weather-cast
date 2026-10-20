@@ -24,7 +24,7 @@ const weatherOptions = [
 ];
 
 function getTestVideoName(weather: string, period: "day" | "night"): string {
-    if (weather === "fog") return `overcast-day`;
+    if (weather === "fog") return `overcast-${period}`;
     if (weather === "rain") return "rain";
     if (weather === "thunderstorm") return "thunderstorm";
 
@@ -59,22 +59,29 @@ export default function WeatherBackground({
     const [testPeriod, setTestPeriod] = useState<"day" | "night">("day");
     const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
 
+    // Until the weather is known only the gradient is shown (no wrong video).
     const name = testMode
         ? getTestVideoName(testWeather, testPeriod)
-        : getWeatherVideoName(weatherCode, isDay, cloudCover);
+        : weatherCode === null
+            ? null
+            : getWeatherVideoName(weatherCode, isDay, cloudCover);
 
-    const videoSrc = getWeatherVideoUrls(name).page;
-    const videoAvailable = loadedSrc === videoSrc;
+    const videoSrc = name === null ? null : getWeatherVideoUrls(name).page;
+    const videoAvailable = videoSrc !== null && loadedSrc === videoSrc;
 
     return (
         <>
-            <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-linear-to-b from-sky-700 to-slate-900">
-                <WeatherVideo
-                    name={name}
-                    variant="page"
-                    className="absolute inset-0"
-                    onLoadedChange={setLoadedSrc}
-                />
+            <div
+                aria-hidden="true"
+                className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-linear-to-b from-sky-700 to-slate-900"
+            >
+                {name !== null && (
+                    <WeatherVideo
+                        name={name}
+                        variant="page"
+                        onLoadedChange={setLoadedSrc}
+                    />
+                )}
 
                 <div className="absolute inset-0 bg-slate-950/35" />
             </div>
@@ -87,9 +94,7 @@ export default function WeatherBackground({
                         Weather condition
                         <select
                             value={testWeather}
-                            onChange={(event) =>
-                                setTestWeather(event.target.value)
-                            }
+                            onChange={(event) => setTestWeather(event.target.value)}
                             className="rounded-md bg-white/10 p-2 outline-none"
                         >
                             {weatherOptions.map((option) => (
@@ -109,9 +114,7 @@ export default function WeatherBackground({
                         <select
                             value={testPeriod}
                             onChange={(event) =>
-                                setTestPeriod(
-                                    event.target.value as "day" | "night",
-                                )
+                                setTestPeriod(event.target.value as "day" | "night")
                             }
                             className="rounded-md bg-white/10 p-2 outline-none"
                         >
@@ -128,16 +131,8 @@ export default function WeatherBackground({
                         File: public{videoSrc}
                     </p>
 
-                    <p
-                        className={
-                            videoAvailable
-                                ? "text-emerald-300"
-                                : "text-amber-300"
-                        }
-                    >
-                        {videoAvailable
-                            ? "Video loaded"
-                            : "Video missing or loading"}
+                    <p className={videoAvailable ? "text-emerald-300" : "text-amber-300"}>
+                        {videoAvailable ? "Video loaded" : "Video missing or loading"}
                     </p>
                 </div>
             )}

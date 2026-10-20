@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -32,6 +31,7 @@ export type DailyItem = {
 
 export type PressureTrend = "rising" | "falling" | "steady";
 
+/** One hour of the detailed series used by the detail popovers. */
 export type HourlyPoint = {
     time: string;
     temperature: number;
@@ -50,6 +50,7 @@ export type HourlyPoint = {
     dewPoint: number | null;
 };
 
+/** Yesterday, today and the next days, hour by hour. */
 export type WeatherDetails = {
     hours: HourlyPoint[];
     days: DailyItem[];
@@ -125,8 +126,7 @@ type OpenMeteoResponse = {
     };
 };
 
-type WeatherState = {
-    key: string;
+type ProcessedWeather = {
     current: CurrentWeather | null;
     forecast: ForecastItem[];
     daily: DailyItem[];
@@ -134,16 +134,24 @@ type WeatherState = {
     error: string | null;
 };
 
-type ProcessedWeather = Omit<WeatherState, "key">;
+type WeatherState = ProcessedWeather & { key: string };
 
+type CacheEntry = {
+    weather: ProcessedWeather;
+    fetchedAt: number;
+};
+
+// Pressure change (hPa) over 3 hours from which the trend is rising or falling.
 const PRESSURE_TREND_THRESHOLD = 1;
+
+// Cached weather older than this is fetched again (and refreshed on screen).
+const MAX_AGE_MS = 10 * 60 * 1000;
 
 const EMPTY_FORECAST: ForecastItem[] = [];
 const EMPTY_DAILY: DailyItem[] = [];
 
-const weatherRequests = new Map<string, Promise<OpenMeteoResponse>>();
-const weatherCache = new Map<string, OpenMeteoResponse>();
-const processedWeatherCache = new Map<string, ProcessedWeather>();
+const cache = new Map<string, CacheEntry>();
+const pendingRequests = new Map<string, Promise<ProcessedWeather>>();
 
 export function getWeatherCondition(code: number): string {
     if (code === 0) return "Clear sky";
@@ -179,7 +187,7 @@ function getCurrentHourIndex(times: string[], currentTime: string): number {
 
     times.forEach((time, index) => {
         const difference = Math.abs(
-            new Date(time).getTime() - new Date(currentTime).getTime(),
+            new Date(time).getTime() - new Date(currentTime).getTime()
         );
 
         if (Number.isFinite(difference) && difference < smallestDifference) {
@@ -191,74 +199,28 @@ function getCurrentHourIndex(times: string[], currentTime: string): number {
     return closestIndex;
 }
 
-function getWeatherRequest(city: City): Promise<OpenMeteoResponse> {
-    const cached = weatherCache.get(city.id);
-    if (cached) return Promise.resolve(cached);
-
-    const existing = weatherRequests.get(city.id);
-    if (existing) return existing;
-
-    const params = new URLSearchParams({
-        latitude: String(city.latitude),
-        longitude: String(city.longitude),
-        current:
-            "temperature_2m,apparent_temperature,pressure_msl,weather_code,is_day,wind_speed_10m,wind_gusts_10m,wind_direction_10m,uv_index,cloud_cover",
-        hourly:
-            "temperature_2m,apparent_temperature,weather_code,is_day,relative_humidity_2m,dew_point_2m,visibility,precipitation,precipitation_probability,pressure_msl,uv_index,wind_speed_10m,wind_gusts_10m,wind_direction_10m",
-        daily:
-            "sunrise,sunset,temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max",
-        past_days: "1",
-        forecast_days: "10",
-        timezone: "auto",
-    });
-
-    const request = fetch(
-        `https://api.open-meteo.com/v1/forecast?${params.toString()}`,
-    )
-        .then(async (response) => {
-            if (!response.ok) {
-                throw new Error("Failed to fetch weather.");
-            }
-
-            const data = (await response.json()) as OpenMeteoResponse;
-
-            if (!data.current || !data.hourly || !data.daily) {
-                throw new Error("Invalid weather response.");
-            }
-
-            weatherCache.set(city.id, data);
-            return data;
-        })
-        .finally(() => {
-            weatherRequests.delete(city.id);
-        });
-
-    weatherRequests.set(city.id, request);
-    return request;
-}
-
 function processWeather(data: OpenMeteoResponse): ProcessedWeather {
     const currentTime = data.current.time;
     const currentDate = currentTime.slice(0, 10);
     const dayIndex = data.daily.sunrise.findIndex(
-        (time) => time.slice(0, 10) === currentDate,
+        (time) => time.slice(0, 10) === currentDate
     );
 
     if (dayIndex < 0) {
         throw new Error("Daily weather data is unavailable.");
     }
 
-    const currentHourIndex = getCurrentHourIndex(
-        data.hourly.time,
-        currentTime,
-    );
+    // Closest hour: used for instant values (humidity, dew point, visibility).
+    const currentHourIndex = getCurrentHourIndex(data.hourly.time, currentTime);
 
     if (currentHourIndex < 0) {
         throw new Error("Current hourly weather data is unavailable.");
     }
 
+    // Last completed hour: precipitation and pressure are indexed by hour,
+    // and the hourly arrays start yesterday (past_days=1).
     const lastHourIndex = data.hourly.time.indexOf(
-        `${currentTime.slice(0, 13)}:00`,
+        `${currentTime.slice(0, 13)}:00`
     );
 
     if (lastHourIndex < 24) {
@@ -291,14 +253,8 @@ function processWeather(data: OpenMeteoResponse): ProcessedWeather {
         feelsLike: data.current.apparent_temperature,
         pressure: data.current.pressure_msl,
         pressureTrend,
-        precipitationLast24h: sumPrecipitation(
-            lastHourIndex - 23,
-            lastHourIndex + 1,
-        ),
-        precipitationNext24h: sumPrecipitation(
-            lastHourIndex + 1,
-            lastHourIndex + 25,
-        ),
+        precipitationLast24h: sumPrecipitation(lastHourIndex - 23, lastHourIndex + 1),
+        precipitationNext24h: sumPrecipitation(lastHourIndex + 1, lastHourIndex + 25),
         weatherCode: data.current.weather_code,
         isDay: data.current.is_day === 1,
         condition: getWeatherCondition(data.current.weather_code),
@@ -326,7 +282,7 @@ function processWeather(data: OpenMeteoResponse): ProcessedWeather {
             (hour) =>
                 hour.time > currentTime &&
                 Number.isFinite(hour.temperature) &&
-                Number.isFinite(hour.weatherCode),
+                Number.isFinite(hour.weatherCode)
         )
         .slice(0, 24);
 
@@ -347,10 +303,9 @@ function processWeather(data: OpenMeteoResponse): ProcessedWeather {
         min: data.daily.temperature_2m_min[index],
         max: data.daily.temperature_2m_max[index],
         weatherCode: data.daily.weather_code[index],
-        precipitationChance:
-            data.daily.precipitation_probability_max[index] ?? 0,
-            sunrise: data.daily.sunrise[index],
-            sunset: data.daily.sunset[index],
+        precipitationChance: data.daily.precipitation_probability_max[index] ?? 0,
+        sunrise: data.daily.sunrise[index],
+        sunset: data.daily.sunset[index],
     }));
 
     const details: WeatherDetails = {
@@ -361,8 +316,7 @@ function processWeather(data: OpenMeteoResponse): ProcessedWeather {
             weatherCode: data.hourly.weather_code[index],
             isDay: data.hourly.is_day[index] === 1,
             precipitation: data.hourly.precipitation[index] ?? 0,
-            precipitationChance:
-                data.hourly.precipitation_probability[index] ?? 0,
+            precipitationChance: data.hourly.precipitation_probability[index] ?? 0,
             uvIndex: data.hourly.uv_index[index] ?? 0,
             pressure: data.hourly.pressure_msl[index],
             visibility: data.hourly.visibility[index],
@@ -378,45 +332,97 @@ function processWeather(data: OpenMeteoResponse): ProcessedWeather {
 
     return {
         current,
-        forecast: [...hours, ...events].sort((a, b) =>
-            a.time.localeCompare(b.time),
-        ),
+        forecast: [...hours, ...events].sort((a, b) => a.time.localeCompare(b.time)),
         daily: allDays.slice(dayIndex),
         details,
         error: null,
     };
 }
 
-export async function preloadWeather(city: City): Promise<ProcessedWeather> {
-    const cached = processedWeatherCache.get(city.id);
-    if (cached) return cached;
+async function requestWeather(city: City): Promise<ProcessedWeather> {
+    const params = new URLSearchParams({
+        latitude: String(city.latitude),
+        longitude: String(city.longitude),
+        current:
+            "temperature_2m,apparent_temperature,pressure_msl,weather_code,is_day,wind_speed_10m,wind_gusts_10m,wind_direction_10m,uv_index,cloud_cover",
+        hourly:
+            "temperature_2m,apparent_temperature,weather_code,is_day,relative_humidity_2m,dew_point_2m,visibility,precipitation,precipitation_probability,pressure_msl,uv_index,wind_speed_10m,wind_gusts_10m,wind_direction_10m",
+        daily:
+            "sunrise,sunset,temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max",
+        past_days: "1",
+        forecast_days: "10",
+        timezone: "auto",
+    });
 
-    const data = await getWeatherRequest(city);
-    const weather = processWeather(data);
+    const response = await fetch(
+        `https://api.open-meteo.com/v1/forecast?${params.toString()}`
+    );
 
-    processedWeatherCache.set(city.id, weather);
-    return weather;
+    if (!response.ok) throw new Error("Failed to fetch weather.");
+
+    const data = (await response.json()) as OpenMeteoResponse;
+
+    if (!data.current || !data.hourly || !data.daily) {
+        throw new Error("Invalid weather response.");
+    }
+
+    return processWeather(data);
+}
+
+/** The cached weather of a city, however old (or null). */
+export function peekWeather(cityId: string): ProcessedWeather | null {
+    return cache.get(cityId)?.weather ?? null;
+}
+
+/**
+ * Loads the weather of a city (shared between callers), reusing the cache when it
+ * is younger than maxAgeMs. It is used to prepare a city before it is shown.
+ */
+export function preloadWeather(
+    city: City,
+    maxAgeMs: number = MAX_AGE_MS
+): Promise<ProcessedWeather> {
+    const entry = cache.get(city.id);
+
+    if (entry && Date.now() - entry.fetchedAt < maxAgeMs) {
+        return Promise.resolve(entry.weather);
+    }
+
+    const pending = pendingRequests.get(city.id);
+
+    if (pending) return pending;
+
+    const request = requestWeather(city)
+        .then((weather) => {
+            cache.set(city.id, { weather, fetchedAt: Date.now() });
+
+            return weather;
+        })
+        .finally(() => {
+            pendingRequests.delete(city.id);
+        });
+
+    pendingRequests.set(city.id, request);
+
+    return request;
 }
 
 export function useWeather(city: City) {
     const { id: key } = city;
-    const [state, setState] = useState<WeatherState | null>(() => {
-        const cached = processedWeatherCache.get(key);
-        return cached ? { ...cached, key } : null;
-    });
+
+    const [state, setState] = useState<WeatherState | null>(null);
 
     useEffect(() => {
         let cancelled = false;
 
-        async function fetchWeather() {
+        async function load() {
             try {
                 const weather = await preloadWeather(city);
 
-                if (!cancelled) {
-                    setState({ ...weather, key });
-                }
+                if (!cancelled) setState({ ...weather, key });
             } catch {
-                if (!cancelled) {
+                // A failed refresh keeps showing the data we already have.
+                if (!cancelled && peekWeather(key) === null) {
                     setState({
                         key,
                         current: null,
@@ -429,14 +435,25 @@ export function useWeather(city: City) {
             }
         }
 
-        void fetchWeather();
+        void load();
+
+        const interval = window.setInterval(() => void load(), MAX_AGE_MS);
 
         return () => {
             cancelled = true;
+            window.clearInterval(interval);
         };
-    }, [key, city]);
+    }, [city, key]);
 
-    const result = state?.key === key ? state : null;
+    // Cached data is shown immediately (no skeleton flash when switching city);
+    // the effect above refreshes it when it is old.
+    const cached = peekWeather(key);
+    const result =
+        state !== null && state.key === key
+            ? state
+            : cached !== null
+                ? { ...cached, key }
+                : null;
 
     return {
         current: result?.current ?? null,

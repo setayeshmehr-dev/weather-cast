@@ -9,9 +9,10 @@ import MoonCalendar from "@/components/weather/popover/MoonCalendar";
 import MoonDisc from "@/components/weather/popover/MoonDisc";
 import MoonScrubber from "@/components/weather/popover/MoonScrubber";
 import { PopoverSection } from "@/components/weather/popover/Parts";
+import { useSmoothMoon } from "@/hooks/useSmoothMoon";
 import type { CurrentWeather } from "@/hooks/useWeather";
 import { createLocalClock } from "@/lib/localClock";
-import { findMoonPhases, getMoonSnapshot } from "@/lib/moon";
+import { findMoonPhases, getMoonAppearance, getMoonSnapshot } from "@/lib/moon";
 
 const HOUR_MS = 3_600_000;
 
@@ -76,6 +77,7 @@ export default function MoonPopover({
         [timeZone]
     );
 
+    // Continuous while the time strip is dragged; whole hours otherwise.
     const [offsetHours, setOffsetHours] = useState(0);
     const [monthOverride, setMonthOverride] = useState<{
         year: number;
@@ -85,8 +87,12 @@ export default function MoonPopover({
     // "Now", at the start of the current local hour.
     const nowMs = Date.parse(`${current.time}Z`) - current.utcOffsetSeconds * 1000;
     const baseMs = nowMs - (clock.minutesOf(nowMs) % 60) * 60_000 - (nowMs % 60_000);
-    const time = baseMs + offsetHours * HOUR_MS;
 
+    const hourOffset = Math.round(offsetHours);
+    const time = baseMs + hourOffset * HOUR_MS;
+    const exactTime = baseMs + offsetHours * HOUR_MS;
+
+    // The texts use the nearest hour; the drawing follows the exact time, smoothed.
     const snapshot = useMemo(
         () =>
             getMoonSnapshot({
@@ -97,6 +103,12 @@ export default function MoonPopover({
             }),
         [time, clock, latitude, longitude]
     );
+
+    const appearanceTarget = useMemo(
+        () => getMoonAppearance(exactTime, latitude, longitude),
+        [exactTime, latitude, longitude]
+    );
+    const appearance = useSmoothMoon(appearanceTarget);
 
     const todayKey = formatters.key.format(nowMs);
     const selectedKey = formatters.key.format(time);
@@ -134,7 +146,7 @@ export default function MoonPopover({
     ].sort((a, b) => (a.ms ?? Infinity) - (b.ms ?? Infinity));
 
     const fullMoonDays = Math.round(snapshot.daysToFullMoon);
-    const isNow = offsetHours === 0;
+    const isNow = hourOffset === 0;
 
     const dateLine = isNow
         ? `${formatters.full.format(time)} at ${clock.format(time)}`
@@ -149,14 +161,14 @@ export default function MoonPopover({
         >
             <div className="flex justify-center px-4 pt-2">
                 <MoonDisc
-                    illumination={snapshot.illumination}
-                    litAngle={snapshot.litAngle}
-                    photoRotation={snapshot.photoRotation}
+                    illumination={appearance.illumination}
+                    litAngle={appearance.litAngle}
+                    photoRotation={appearance.photoRotation}
                     className="size-50"
                 />
             </div>
 
-            <div className="relative px-4 text-center">
+            <div className="relative px-4 pt-4 text-center">
                 {!isNow && (
                     <button
                         type="button"
@@ -183,7 +195,7 @@ export default function MoonPopover({
 
             <div className="px-4 pt-3 pb-2">
                 <MoonScrubber
-                    time={time}
+                    baseMs={baseMs}
                     offsetHours={offsetHours}
                     onOffsetChange={(next) => {
                         setOffsetHours(next);

@@ -8,6 +8,9 @@ import { getWeatherVideoUrls } from "@/lib/weatherVideo";
 // Card videos start loading this long after the page has finished loading.
 const CARD_DELAY_MS = 1200;
 
+// Duration of the cross-fade between two videos (matches duration-700 below).
+const FADE_MS = 700;
+
 type WeatherVideoProps = {
     name: string;
     variant: "page" | "card";
@@ -30,14 +33,29 @@ export default function WeatherVideo({
     const allowed = isPage ? policy !== "none" : policy === "all";
 
     const containerRef = useRef<HTMLDivElement | null>(null);
-    const videoRef = useRef<HTMLVideoElement | null>(null);
+    const wantedSrcRef = useRef(src);
+    const fadeTimer = useRef<number | undefined>(undefined);
 
     // The page video is always wanted; card videos wait until they are visible
     // and the page has settled.
     const [inView, setInView] = useState(isPage);
     const [settled, setSettled] = useState(isPage);
-    const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
+
+    // The video on screen, the one fading out, and the one that failed to load.
+    const [activeSrc, setActiveSrc] = useState<string | null>(null);
+    const [leavingSrc, setLeavingSrc] = useState<string | null>(null);
+    const [failedSrc, setFailedSrc] = useState<string | null>(null);
+
+    const [activePoster, setActivePoster] = useState(poster);
     const [failedPoster, setFailedPoster] = useState<string | null>(null);
+
+    useEffect(() => {
+        wantedSrcRef.current = src;
+    }, [src]);
+
+    useEffect(() => {
+        return () => window.clearTimeout(fadeTimer.current);
+    }, []);
 
     useEffect(() => {
         if (isPage) return;
@@ -81,68 +99,115 @@ export default function WeatherVideo({
 
     // Pause when the video is out of view or the tab is hidden (saves CPU and battery).
     useEffect(() => {
-        const video = videoRef.current;
+        const updatePlayback = () => {
+            const shouldPlay = inView && !document.hidden;
 
-        if (!video) return;
-
-        const update = () => {
-            if (inView && !document.hidden) {
-                void video.play().catch(() => undefined);
-            } else {
-                video.pause();
-            }
+            containerRef.current?.querySelectorAll("video").forEach((video) => {
+                if (shouldPlay) {
+                    void video.play().catch(() => undefined);
+                } else {
+                    video.pause();
+                }
+            });
         };
 
-        update();
-        document.addEventListener("visibilitychange", update);
+        updatePlayback();
 
-        return () => document.removeEventListener("visibilitychange", update);
-    }, [inView, shouldLoad, src]);
+        document.addEventListener("visibilitychange", updatePlayback);
+
+        return () => {
+            document.removeEventListener("visibilitychange", updatePlayback);
+        };
+    }, [inView, shouldLoad, src, activeSrc, leavingSrc]);
+
+    // The wanted video is mounted (invisible) next to the active one until it can
+    // play, then it fades in on top while the old one stays underneath.
+    const wantedSrc =
+        shouldLoad && src !== activeSrc && src !== failedSrc ? src : null;
+
+    const sources = allowed
+        ? [leavingSrc, activeSrc, wantedSrc].filter(
+            (value, index, list): value is string =>
+                value !== null && list.indexOf(value) === index,
+        )
+        : [];
+
+    const handleCanPlay = (videoSrc: string) => {
+        if (videoSrc !== wantedSrcRef.current || videoSrc === activeSrc) return;
+
+        setLeavingSrc(activeSrc);
+        setActiveSrc(videoSrc);
+        setActivePoster(poster);
+        setFailedPoster(null);
+        onLoadedChange?.(videoSrc);
+
+        window.clearTimeout(fadeTimer.current);
+        fadeTimer.current = window.setTimeout(() => setLeavingSrc(null), FADE_MS);
+    };
+
+    const handleError = (videoSrc: string) => {
+        if (videoSrc !== wantedSrcRef.current) return;
+
+        setFailedSrc(videoSrc);
+
+        // No video for this weather: show its poster instead of the old video.
+        setActiveSrc(null);
+        setLeavingSrc(null);
+        setActivePoster(poster);
+        onLoadedChange?.(null);
+    };
+
+    // Without videos (reduced motion, data saver...) the poster follows the weather.
+    const shownPoster = allowed ? activePoster : poster;
 
     return (
         <div
             ref={containerRef}
-            className={`relative h-full w-full overflow-hidden ${className}`}
+            aria-hidden="true"
+            className={`pointer-events-none absolute inset-0 h-full w-full overflow-hidden ${className}`}
         >
-            {failedPoster !== poster && (
+            {failedPoster !== shownPoster && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                    src={poster}
+                    src={shownPoster}
                     alt=""
                     loading={isPage ? "eager" : "lazy"}
                     decoding="async"
-                    onError={() => setFailedPoster(poster)}
-                    className="absolute inset-0 size-full object-cover"
+                    onError={() => setFailedPoster(shownPoster)}
+                    className="absolute inset-0 z-0 h-full w-full object-cover"
                 />
             )}
 
-            {shouldLoad && (
-                <video
-                    key={src}
-                    ref={videoRef}
-                    src={src}
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    preload={isPage ? "auto" : "metadata"}
-                    aria-hidden="true"
-                    tabIndex={-1}
-                    onCanPlay={() => {
-                        setLoadedSrc(src);
-                        onLoadedChange?.(src);
-                    }}
-                    onError={() => {
-                        setLoadedSrc((previous) =>
-                            previous === src ? null : previous,
-                        );
-                        onLoadedChange?.(null);
-                    }}
-                    className={`absolute inset-0 size-full object-cover transition-opacity duration-700 ${
-                        loadedSrc === src ? "opacity-100" : "opacity-0"
-                    }`}
-                />
-            )}
+            {sources.map((videoSrc) => {
+                const role =
+                    videoSrc === activeSrc
+                        ? "active"
+                        : videoSrc === leavingSrc
+                            ? "leaving"
+                            : "pending";
+
+                return (
+                    <video
+                        key={videoSrc}
+                        src={videoSrc}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload={isPage ? "auto" : "metadata"}
+                        tabIndex={-1}
+                        onCanPlay={() => handleCanPlay(videoSrc)}
+                        onError={() => handleError(videoSrc)}
+                        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
+                            role === "leaving"
+                                ? "z-0 opacity-100"
+                                : role === "active"
+                                    ? "z-10 opacity-100"
+                                    : "z-10 opacity-0"
+                        }`}
+                    />
+                );
+            })}
         </div>
     );
 }

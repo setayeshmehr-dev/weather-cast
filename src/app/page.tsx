@@ -1,12 +1,15 @@
 "use client";
 
 import { Plus, SidebarSimple } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import Sidebar from "@/components/sidebar/Sidebar";
 import WeatherDashboard from "@/components/weather/WeatherDashboard";
 import { useCities } from "@/hooks/useCities";
+import { preloadWeather } from "@/hooks/useWeather";
 import type { City } from "@/lib/cities";
+import { preloadWeatherVideo } from "@/lib/preloadVideo";
+import { getWeatherVideoName, getWeatherVideoUrls } from "@/lib/weatherVideo";
 
 const MOBILE_QUERY = "(max-width: 767px)";
 
@@ -26,12 +29,53 @@ export default function Home() {
     } = useCities();
 
     const [query, setQuery] = useState("");
+    const [pendingCity, setPendingCity] = useState<City | null>(null);
+    const selectionRequest = useRef(0);
 
-    const handleSelectCity = (city: City) => {
-        selectCity(city);
-
+    const closeSidebarOnMobile = () => {
         // On small screens the sidebar is an overlay: close it to show the city.
         if (window.matchMedia(MOBILE_QUERY).matches) setSidebarOpen(false);
+    };
+
+    /*
+     * The old city stays on screen until the new one is ready: its weather is
+     * loaded and the video of its weather is warmed up (both with a timeout, so
+     * this can never get stuck). A newer click cancels an older one.
+     */
+    const handleSelectCity = async (city: City) => {
+        const requestId = ++selectionRequest.current;
+
+        if (city.id === selectedCity.id) {
+            setPendingCity(null);
+            closeSidebarOnMobile();
+            return;
+        }
+
+        setPendingCity(city);
+
+        try {
+            const { current } = await preloadWeather(city);
+
+            if (requestId !== selectionRequest.current) return;
+
+            if (current) {
+                const name = getWeatherVideoName(
+                    current.weatherCode,
+                    current.isDay,
+                    current.cloudCover,
+                );
+
+                await preloadWeatherVideo(getWeatherVideoUrls(name).page);
+            }
+        } catch {
+            // The dashboard shows the error of this city.
+        }
+
+        if (requestId !== selectionRequest.current) return;
+
+        selectCity(city);
+        setPendingCity(null);
+        closeSidebarOnMobile();
     };
 
     const handleAddCity = () => {
@@ -40,7 +84,15 @@ export default function Home() {
     };
 
     return (
-        <div className="relative isolate flex h-dvh overflow-hidden bg-linear-to-b from-sky-700 to-slate-900">
+        <div className="flex h-dvh overflow-hidden bg-linear-to-b from-sky-700 to-slate-900">
+            {pendingCity && (
+                <div
+                    role="progressbar"
+                    aria-label={`Loading ${pendingCity.name}`}
+                    className="fixed inset-x-0 top-0 z-50 h-0.5 animate-pulse bg-white/80"
+                />
+            )}
+
             {sidebarOpen && (
                 <div
                     className="fixed inset-0 z-30 bg-black/40 md:hidden"
