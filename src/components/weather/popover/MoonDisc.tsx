@@ -3,9 +3,10 @@
 import { useId } from "react";
 
 const MOON_IMAGE = "/images/moon.webp";
-
-// Extra rotation if the photo was not shot with lunar north up.
-const PHOTO_OFFSET_DEGREES = 0;
+// The photo has empty margin around the moon. This scale makes the edge of the
+// moon touch the edge of the disc, so the shadow and the glow start right at it.
+// If the moon is 86% of the photo width, the scale is 1 / 0.86 = 1.16.
+const MOON_SCALE = 1.19;
 
 /*
  * The dark region (lit side on the right): everything left of the terminator,
@@ -20,27 +21,21 @@ function shadowRegion(illumination: number): string {
 }
 
 type MoonDiscProps = {
-    illumination: number;
-    /** Direction of the lit side, degrees clockwise from up. */
-    litAngle: number;
-    /** Rotation of the photo, degrees clockwise. */
-    photoRotation: number;
+    /** Phase of the moon: 0 = new, 0.5 = full, 1 = new again. */
+    phase: number;
     className?: string;
 };
 
 /*
- * Layers: the photo and the shadow are turned with CSS transforms (cheap, done
- * by the GPU), so dragging the time strip stays smooth. Only the shape of the
- * shadow is redrawn, and it changes slowly.
+ * The moon itself never moves: only the shadow grows and shrinks. Before the
+ * full moon the right side is lit, after it the left side.
  */
-export default function MoonDisc({
-    illumination,
-    litAngle,
-    photoRotation,
-    className = "",
-}: MoonDiscProps) {
+export default function MoonDisc({ phase, className = "" }: MoonDiscProps) {
     const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
     const softId = `${id}-soft`;
+
+    const illumination = (1 - Math.cos(2 * Math.PI * phase)) / 2;
+    const waxing = phase < 0.5;
 
     return (
         <div
@@ -55,17 +50,15 @@ export default function MoonDisc({
                     src={MOON_IMAGE}
                     alt=""
                     draggable={false}
-                    className="absolute inset-0 size-full object-cover will-change-transform"
-                    style={{
-                        transform: `rotate(${photoRotation + PHOTO_OFFSET_DEGREES}deg) scale(1.16)`,
-                    }}
+                    className="absolute inset-0 size-full object-cover"
+                    style={{ transform: `scale(${MOON_SCALE})` }}
                 />
 
                 {/* The unlit side is dimmed, not black, so the surface stays faintly visible. */}
                 <svg
                     viewBox="0 0 100 100"
-                    className="absolute inset-0 size-full will-change-transform"
-                    style={{ transform: `rotate(${litAngle - 90}deg)` }}
+                    className="absolute inset-0 size-full"
+                    style={{ transform: waxing ? "none" : "scaleX(-1)" }}
                     aria-hidden="true"
                 >
                     <defs>

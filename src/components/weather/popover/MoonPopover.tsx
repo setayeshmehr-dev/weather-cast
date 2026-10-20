@@ -9,11 +9,10 @@ import MoonCalendar from "@/components/weather/popover/MoonCalendar";
 import MoonDisc from "@/components/weather/popover/MoonDisc";
 import MoonScrubber from "@/components/weather/popover/MoonScrubber";
 import { PopoverSection } from "@/components/weather/popover/Parts";
-import { useSmoothMoon } from "@/hooks/useSmoothMoon";
+import { useSmoothPhase } from "@/hooks/useSmoothPhase";
 import type { CurrentWeather } from "@/hooks/useWeather";
 import { createLocalClock } from "@/lib/localClock";
-import { findMoonPhases, getMoonAppearance, getMoonSnapshot } from "@/lib/moon";
-
+import { findMoonPhases, getMoonSnapshot } from "@/lib/moon";
 const HOUR_MS = 3_600_000;
 
 type RowProps = {
@@ -90,7 +89,7 @@ export default function MoonPopover({
 
     const hourOffset = Math.round(offsetHours);
     const time = baseMs + hourOffset * HOUR_MS;
-    const exactTime = baseMs + offsetHours * HOUR_MS;
+
 
     // The texts use the nearest hour; the drawing follows the exact time, smoothed.
     const snapshot = useMemo(
@@ -104,11 +103,8 @@ export default function MoonPopover({
         [time, clock, latitude, longitude]
     );
 
-    const appearanceTarget = useMemo(
-        () => getMoonAppearance(exactTime, latitude, longitude),
-        [exactTime, latitude, longitude]
-    );
-    const appearance = useSmoothMoon(appearanceTarget);
+    // The shadow glides toward the phase instead of jumping.
+    const phase = useSmoothPhase(snapshot.phase);
 
     const todayKey = formatters.key.format(nowMs);
     const selectedKey = formatters.key.format(time);
@@ -160,12 +156,7 @@ export default function MoonPopover({
             onClose={onClose}
         >
             <div className="flex justify-center px-4 pt-2">
-                <MoonDisc
-                    illumination={appearance.illumination}
-                    litAngle={appearance.litAngle}
-                    photoRotation={appearance.photoRotation}
-                    className="size-50"
-                />
+                <MoonDisc phase={phase} className="size-[200px]" />
             </div>
 
             <div className="relative px-4 pt-4 text-center">

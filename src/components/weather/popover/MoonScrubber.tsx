@@ -83,17 +83,13 @@ export default function MoonScrubber({
 
     const clamp = (value: number) => Math.min(Math.max(value, -MAX_OFFSET), MAX_OFFSET);
 
-    const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+        const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+        // Only the primary button drags (a right click would open the menu and
+        // the release would never arrive).
+        if (event.pointerType === "mouse" && event.button !== 0) return;
+
         event.currentTarget.setPointerCapture(event.pointerId);
         drag.current = { x: event.clientX, offset: offsetHours };
-    };
-
-    const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
-        if (!drag.current) return;
-
-        const hours = (drag.current.x - event.clientX) / PX_PER_HOUR;
-
-        onOffsetChange(clamp(drag.current.offset + hours));
     };
 
     // On release the time settles on the nearest hour.
@@ -102,6 +98,20 @@ export default function MoonScrubber({
 
         drag.current = null;
         onOffsetChange(Math.round(offsetHours));
+    };
+
+    const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+        if (!drag.current) return;
+
+        // The button was released somewhere we did not hear about.
+        if (event.pointerType === "mouse" && event.buttons === 0) {
+            handleRelease();
+            return;
+        }
+
+        const hours = (drag.current.x - event.clientX) / PX_PER_HOUR;
+
+        onOffsetChange(clamp(drag.current.offset + hours));
     };
 
     const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -132,6 +142,8 @@ export default function MoonScrubber({
             onPointerMove={handlePointerMove}
             onPointerUp={handleRelease}
             onPointerCancel={handleRelease}
+            onLostPointerCapture={handleRelease}
+            onContextMenu={(event) => event.preventDefault()}
             className="relative h-18 cursor-grab touch-pan-y select-none outline-none active:cursor-grabbing"
         >
             <div className="absolute inset-0 overflow-hidden mask-[linear-gradient(to_right,transparent,#000_12%,#000_88%,transparent)]">
