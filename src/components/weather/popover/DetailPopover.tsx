@@ -12,8 +12,14 @@ const MARGIN = 12;
 const ARROW_INSET = 28;
 const MOBILE_QUERY = "(max-width: 767px)";
 
-const PANEL_FILL = "#1c2036";
-const PANEL_STROKE = "rgba(255,255,255,0.16)";
+/*
+ * SVG arrow fills can't carry backdrop-filter, so we approximate the frosted
+ * dark glass panel with a near-opaque dark color (#16161c) that visually
+ * matches the panel's appearance against most backgrounds. The stroke mirrors
+ * the 1px hairline border used on the panel itself (rgba(255,255,255,0.08)).
+ */
+const PANEL_FILL = "#16161c";
+const PANEL_STROKE = "rgba(255,255,255,0.08)";
 
 type Side = "left" | "right" | "top";
 
@@ -227,7 +233,7 @@ export default function DetailPopover({
                 onClick={onClose}
                 className={`fixed inset-0 z-40 ${
                     mobile
-                        ? "bg-black/40 backdrop-blur-sm transition-opacity duration-300 starting:opacity-0"
+                        ? "bg-black/40 backdrop-blur-sm transition-opacity duration-300 starting:opacity-0 motion-reduce:transition-none"
                         : ""
                 }`}
             />
@@ -240,8 +246,8 @@ export default function DetailPopover({
                 tabIndex={-1}
                 className={
                     mobile
-                        ? "fixed inset-x-0 bottom-0 z-50 h-[90dvh] outline-none transition-transform duration-300 starting:translate-y-full"
-                        : `fixed z-50 outline-none transition duration-150 starting:scale-95 starting:opacity-0 ${ORIGIN[placement.side]}`
+                        ? "fixed inset-x-0 bottom-0 z-50 h-[90dvh] outline-none transition-transform duration-300 starting:translate-y-full motion-reduce:transition-none motion-reduce:duration-0"
+                        : `fixed z-50 outline-none transition duration-150 starting:scale-95 starting:opacity-0 motion-reduce:transition-none motion-reduce:duration-0 ${ORIGIN[placement.side]}`
                 }
                 style={
                     mobile
@@ -258,29 +264,100 @@ export default function DetailPopover({
                     <PopoverArrow side={placement.side} offset={placement.arrow} />
                 )}
 
+                {/*
+                 * Frosted dark glass sheet (Apple Weather style).
+                 *
+                 * Background layering strategy:
+                 *   1. Default (no backdrop-filter support): bg-[#0f0f14]/70 — a
+                 *      semi-opaque dark fill that still reads correctly over busy
+                 *      backgrounds.
+                 *   2. With backdrop-filter (modern browsers): bg-[#0f0f14]/55 +
+                 *      backdrop-blur-2xl (blur 40px) + backdrop-saturate-[1.8]
+                 *      (saturate 180%). Whatever sits behind the popover bleeds
+                 *      through as a soft blurred glow.
+                 *
+                 * Border: white/10 hairline outline for the "lit glass edge" look.
+                 */}
                 <div
-                    className={`flex h-full flex-col overflow-hidden border border-white/15 bg-[#1c2036]/80 text-white shadow-2xl backdrop-blur-2xl ${
-                        mobile ? "rounded-t-[28px]" : "rounded-[22px]"
-                    }`}
+                    className={`relative flex h-full flex-col overflow-hidden border border-white/10 text-white shadow-2xl
+                        bg-[#0f0f14]/70
+                        supports-[backdrop-filter]:bg-[#0f0f14]/55
+                        supports-[backdrop-filter]:backdrop-blur-2xl
+                        supports-[backdrop-filter]:backdrop-saturate-[1.8]
+                        ${mobile ? "rounded-t-[28px]" : "rounded-[22px]"}`}
                 >
-                    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-                        <div className="sticky top-0 z-10 flex h-14 items-center justify-center gap-2 bg-[#1c2036]/70 backdrop-blur-xl">
-                            {icon}
+                    {/* 1px lit-glass hairline along the very top edge of the panel */}
+                    <span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-x-0 top-0 z-20 h-px bg-white/10"
+                    />
 
-                            <h2 className="text-base font-semibold">{title}</h2>
+                    {/*
+                     * Pinned header — now a SIBLING of the scroll container, not
+                     * a child. This is the bulletproof fix for the overscroll
+                     * problem: even if the scroll container rubber-bands on iOS
+                     * Safari or Chrome, the header is structurally outside the
+                     * scroll context and cannot be dragged along.
+                     */}
+                    <header className="relative z-10 flex h-14 shrink-0 items-center justify-center gap-2 bg-[#0a0a0f]/35">
+                        {/* Soft 1px shadow at the header's bottom edge for depth */}
+                        <span
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-black/25"
+                        />
+                        {icon}
+                        <h2 className="text-base font-semibold">{title}</h2>
+                        {mobile && (
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                aria-label="Close"
+                                className="absolute right-3 flex size-8 items-center justify-center rounded-full bg-white/15 hover:bg-white/25"
+                            >
+                                <X size={16} weight="bold" />
+                            </button>
+                        )}
+                    </header>
 
-                            {mobile && (
-                                <button
-                                    type="button"
-                                    onClick={onClose}
-                                    aria-label="Close"
-                                    className="absolute right-3 flex size-8 items-center justify-center rounded-full bg-white/15 hover:bg-white/25"
-                                >
-                                    <X size={16} weight="bold" />
-                                </button>
-                            )}
-                        </div>
-
+                    {/*
+                     * Scroll container — only the body content scrolls.
+                     *
+                     * `overscroll-none` (overscroll-behavior: none) kills the
+                     * rubber-band bounce and pull-to-refresh gesture at both
+                     * scroll boundaries on modern browsers. The explicit
+                     * [overscroll-behavior:none] and [-webkit-overflow-scrolling:auto]
+                     * fallbacks catch older iOS Safari variants.
+                     *
+                     * Custom scrollbar styling (Apple Weather style):
+                     *   - Thin 6px thumb (w-1.5)
+                     *   - Translucent white thumb (bg-white/15) — visible on the
+                     *     frosted dark glass but unobtrusive
+                     *   - Transparent track — no "tunnel" ever, even on hover
+                     *   - No hover state change — thumb stays the same color
+                     *     whether the pointer is over it or not
+                     *
+                     * These arbitrary-variant rules compile to:
+                     *   .scoped-class::-webkit-scrollbar-thumb:hover { ... }
+                     * which has higher specificity (0,2,1) than any global
+                     * ::-webkit-scrollbar-thumb:hover rule (0,1,1), so they win
+                     * even if there's a global stylesheet trying to set them.
+                     *
+                     * Firefox support: `scrollbar-width: thin` (replaces the
+                     * default thick bar) + `scrollbar-color` (thumb + track).
+                     */}
+                    <div
+                        className="min-h-0 flex-1 overflow-y-auto overscroll-none [overscroll-behavior:none] [-webkit-overflow-scrolling:auto]
+                            [&::-webkit-scrollbar]:w-1.5
+                            [&::-webkit-scrollbar]:bg-transparent
+                            [&::-webkit-scrollbar-thumb]:rounded-full
+                            [&::-webkit-scrollbar-thumb]:bg-white/15
+                            [&::-webkit-scrollbar-thumb:hover]:bg-white/15
+                            [&::-webkit-scrollbar-thumb:active]:bg-white/25
+                            [&::-webkit-scrollbar-track]:bg-transparent
+                            [&::-webkit-scrollbar-track:hover]:bg-transparent
+                            [scrollbar-width:thin]
+                            [scrollbar-color:rgba(255,255,255,0.15)_transparent]"
+                    >
                         {children}
                     </div>
                 </div>
