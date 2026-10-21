@@ -210,10 +210,7 @@ export default function MapCard({ city, current, className }: MapCardProps) {
                     color: [126, 220, 255, 230],
                     fastColor: [177, 237, 255, 245],
                     smooth: true,
-                    density: 2,
-                    maxAmount: 128,
-                    speed: 0.0006,
-                    fadeFactor: 0.1,
+                    density: 14,
                 });
             } else if (activeLayer === "temperature") {
                 nextLayer = new TemperatureLayer({
