@@ -3,10 +3,12 @@
 import { MagnifyingGlass, SidebarSimple, XCircle } from "@phosphor-icons/react";
 import { useState } from "react";
 import type { KeyboardEvent } from "react";
+import { createPortal } from "react-dom";
 
 import CityCard from "@/components/sidebar/CityCard";
-import { useCitySearch } from"@/hooks/useCitySearch";
+import { useCitySearch } from "@/hooks/useCitySearch";
 import { useCitySummaries } from "@/hooks/useCitySummaries";
+import { useDragReorder } from "@/hooks/useDragReorder";
 import { useNow } from "@/hooks/useNow";
 import { formatCityLabel } from "@/lib/cities";
 import type { City } from "@/lib/cities";
@@ -20,7 +22,6 @@ type SuggestionLabelProps = {
     query: string;
 };
 
-// The part that matches what was typed is brighter, like in Apple Weather.
 function SuggestionLabel({ label, query }: SuggestionLabelProps) {
     const typed = query.trim();
     const matches =
@@ -46,9 +47,7 @@ function Message({ title, text }: MessageProps) {
     return (
         <div className="flex flex-col items-center gap-2 px-4 pt-16 text-center">
             <MagnifyingGlass size={44} className="text-white/40" />
-
             {title && <p className="text-lg font-semibold text-white">{title}</p>}
-
             <p className="text-sm text-white/60">{text}</p>
         </div>
     );
@@ -61,6 +60,8 @@ type SidebarProps = {
     onQueryChange: (query: string) => void;
     onSelectCity: (city: City) => void;
     onRemoveCity: (id: string) => void;
+    /** Called when the user finishes a drag-and-drop reorder. */
+    onReorderCities: (from: number, to: number) => void;
     onClose: () => void;
 };
 
@@ -71,6 +72,7 @@ export default function Sidebar({
     onQueryChange,
     onSelectCity,
     onRemoveCity,
+    onReorderCities,
     onClose,
 }: SidebarProps) {
     const [focused, setFocused] = useState(false);
@@ -78,6 +80,9 @@ export default function Sidebar({
     const summaries = useCitySummaries(cities);
     const now = useNow();
     const search = useCitySearch(query);
+
+    // Drag-and-drop is only active in the (non-searching) city-list view.
+    const drag = useDragReorder(cities, onReorderCities);
 
     const trimmed = query.trim();
     const searching = focused || query !== "";
@@ -97,19 +102,71 @@ export default function Sidebar({
         if (!searching) {
             return (
                 <ul className="flex flex-col gap-5">
-                    {cities.map((city) => (
-                        <li key={city.id}>
-                            <CityCard
-                                city={city}
-                                summary={summaries[city.id]}
-                                now={now}
-                                selected={city.id === selectedCity.id}
-                                canRemove={cities.length > 1}
-                                onSelect={() => onSelectCity(city)}
-                                onRemove={() => onRemoveCity(city.id)}
-                            />
-                        </li>
-                    ))}
+                    {cities.map((city, index) => {
+                        const isDragging = drag.draggingId === city.id;
+                        const dropAbove =
+                            drag.dropIndicator?.id === city.id &&
+                            drag.dropIndicator.position === "above";
+                        const dropBelow =
+                            drag.dropIndicator?.id === city.id &&
+                            drag.dropIndicator.position === "below";
+
+                        return (
+                            <li
+                                key={city.id}
+                                data-draggable-id={city.id}
+                                className="relative list-none"
+                            >
+                                {/*
+                                 * Drop indicator line (above). Sits in the
+                                 * middle of the 20px gap between cards
+                                 * (-top-2.5 = -10px). The shadow glow makes
+                                 * it pop against any weather background.
+                                 */}
+                                {dropAbove && (
+                                    <span
+                                        aria-hidden="true"
+                                        className="absolute h-0.5 -top-2.5 left-3 right-3 z-40  rounded-full bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.7)]"
+                                    />
+                                )}
+
+                                {/*
+                                 * The card wrapper carries the pointer-down
+                                 * handler for drag. When this card is the
+                                 * dragged one, the wrapper is rendered but
+                                 * the CityCard inside is dimmed to 30%
+                                 * (placeholder look) — the floating clone
+                                 * (rendered at the bottom of the component)
+                                 * shows the full-opacity version.
+                                 */}
+                                <div
+                                    onPointerDown={(event) =>
+                                        drag.onItemPointerDown(city.id, index, event)
+                                    }
+                                >
+                                    <CityCard
+                                        city={city}
+                                        summary={summaries[city.id]}
+                                        now={now}
+                                        selected={city.id === selectedCity.id}
+                                        canRemove={cities.length > 1}
+                                        onSelect={() => onSelectCity(city)}
+                                        onRemove={() => onRemoveCity(city.id)}
+                                        isDragging={isDragging}
+                                        suppressClick={drag.wasDragging}
+                                    />
+                                </div>
+
+                                {/* Drop indicator line (below). */}
+                                {dropBelow && (
+                                    <span
+                                        aria-hidden="true"
+                                        className="absolute -bottom-2.5 left-3 right-3 z-40 h-0.5 rounded-full bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.7)]"
+                                    />
+                                )}
+                            </li>
+                        );
+                    })}
                 </ul>
             );
         }
@@ -141,7 +198,7 @@ export default function Sidebar({
         }
 
         return (
-            <ul className="flex flex-col ">
+            <ul className="flex flex-col">
                 {search.results.map((city) => (
                     <li key={city.id}>
                         <button
@@ -163,6 +220,12 @@ export default function Sidebar({
             </ul>
         );
     };
+
+    // The dragged city, looked up once so we don't refind it inside the JSX.
+    const draggedCity =
+        drag.draggingId !== null
+            ? cities.find((c) => c.id === drag.draggingId) ?? null
+            : null;
 
     return (
         <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-black/25 text-white backdrop-blur-xl">
@@ -192,13 +255,12 @@ export default function Sidebar({
                         aria-label="Search for a city"
                         autoComplete="off"
                         spellCheck={false}
-                        className="min-w-0 flex-1  bg-transparent text-white outline-none placeholder:text-white/50"
+                        className="min-w-0 flex-1 bg-transparent text-white outline-none placeholder:text-white/50"
                     />
 
                     {query !== "" && (
                         <button
                             type="button"
-                            // Keeps the focus in the input while clearing it.
                             onMouseDown={(event) => event.preventDefault()}
                             onClick={() => onQueryChange("")}
                             aria-label="Clear search"
@@ -213,6 +275,50 @@ export default function Sidebar({
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 pb-2">
                 {renderContent()}
             </div>
+
+            {/*
+             * Floating clone of the dragged card. Rendered in a portal on
+             * document.body so it isn't clipped by the sidebar's
+             * `overflow-hidden` or constrained to the sidebar's scroll area.
+             *
+             * It follows the cursor using the offset captured at drag start
+             * (so the cursor stays at the same spot on the card the whole
+             * time), and is enlarged by 5% with a strong drop shadow for the
+             * "lifted off the surface" look Apple Weather uses.
+             *
+             * `pointer-events-none` is critical — it lets pointermove events
+             * pass through the clone to the cards beneath, so the drop
+             * indicator stays accurate.
+             */}
+            {drag.draggingId !== null &&
+                drag.pointerPosition !== null &&
+                drag.cardRect !== null &&
+                draggedCity &&
+                createPortal(
+                    <div
+                        className="fixed z-50 pointer-events-none"
+                        style={{
+                            left: drag.pointerPosition.x - drag.pointerOffset.x,
+                            top: drag.pointerPosition.y - drag.pointerOffset.y,
+                            width: drag.cardRect.width,
+                            transform: "scale(1.05)",
+                            transformOrigin: "top left",
+                            filter: "drop-shadow(0 12px 24px rgba(0, 0, 0, 0.45))",
+                            opacity: 0.95,
+                        }}
+                    >
+                        <CityCard
+                            city={draggedCity}
+                            summary={summaries[draggedCity.id]}
+                            now={now}
+                            selected={draggedCity.id === selectedCity.id}
+                            canRemove={false}
+                            onSelect={() => {}}
+                            onRemove={() => {}}
+                        />
+                    </div>,
+                    document.body
+                )}
         </div>
     );
 }

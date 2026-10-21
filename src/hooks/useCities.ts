@@ -7,6 +7,7 @@ import {
     getServerSnapshot,
     getSnapshot,
     removeCity,
+    reorderCities,
     selectCity,
     setSidebarOpen,
     subscribe,
@@ -23,6 +24,7 @@ export function useCities() {
         selectCity,
         addCity,
         removeCity,
+        reorderCities,
         setSidebarOpen,
     };
 }

@@ -20,6 +20,7 @@ export default function Home() {
     const {
         cities,
         selectedCity,
+        reorderCities,
         isSelectedSaved,
         sidebarOpen,
         selectCity,
@@ -119,8 +120,9 @@ export default function Home() {
                         selectedCity={selectedCity}
                         query={query}
                         onQueryChange={setQuery}
-                        onSelectCity={handleSelectCity}
-                        onRemoveCity={removeCity}
+                        onSelectCity={(city) => selectCity(city)}
+                        onRemoveCity={(id) => removeCity(id)}
+                        onReorderCities={reorderCities}   // ← NEW
                         onClose={() => setSidebarOpen(false)}
                     />
                 </div>

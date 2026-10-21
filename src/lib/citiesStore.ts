@@ -138,3 +138,24 @@ export function setSidebarOpen(open: boolean): void {
     load();
     setState({ ...state, sidebarOpen: open });
 }
+
+export function reorderCities(from: number, to: number) {
+    load();
+
+    // Validate indices — silent no-op on bad input.
+    if (from === to) return;
+    if (from < 0 || from >= state.cities.length) return;
+    if (to < 0 || to >= state.cities.length) return;
+
+    // Compute the reordered array. We splice the dragged item out, then
+    // splice it back in at the target index. This matches the algorithm
+    // used by `useDragReorder`'s `computeToIndex`.
+    const nextCities = [...state.cities];
+    const [moved] = nextCities.splice(from, 1);
+    nextCities.splice(to, 0, moved);
+
+    // `setState` handles state mutation + localStorage persistence +
+    // listener notification in one shot, matching the pattern of
+    // `addCity`, `removeCity`, and `setSidebarOpen`.
+    setState({ ...state, cities: nextCities });
+}
