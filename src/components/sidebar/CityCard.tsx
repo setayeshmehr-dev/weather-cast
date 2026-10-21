@@ -1,7 +1,9 @@
-
 "use client";
 
-import { X } from "@phosphor-icons/react";
+import { Trash } from "@phosphor-icons/react";
+import { useEffect, useRef, useState } from "react";
+import type { MouseEvent } from "react";
+import { createPortal } from "react-dom";
 
 import WeatherVideo from "@/components/weather/WeatherVideo";
 import type { CitySummary } from "@/hooks/useCitySummaries";
@@ -47,14 +49,71 @@ export default function CityCard({
     onSelect,
     onRemove,
 }: CityCardProps) {
+    // Viewport coordinates of the right-click that opened the Delete menu.
+    // `null` when the menu is closed.
+    const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+    const menuRef = useRef<HTMLButtonElement | null>(null);
+
+    // Close on Escape, on outside pointerdown, on blur, and on scroll.
+    useEffect(() => {
+        if (!menu) return;
+
+        const close = () => setMenu(null);
+
+        const handlePointerDown = (event: PointerEvent) => {
+            // Pointer is on the menu itself — let the menu's own click
+            // handler take it. Otherwise, this is an outside click → close.
+            if (menuRef.current?.contains(event.target as Node)) return;
+            close();
+        };
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") close();
+        };
+
+        // Defer attaching the listeners by one tick so the same right-click
+        // gesture that opened the menu doesn't immediately close it (the
+        // pointerdown that follows the contextmenu event would otherwise
+        // trigger `handlePointerDown` and close the menu the instant it opens).
+        const id = window.setTimeout(() => {
+            document.addEventListener("pointerdown", handlePointerDown);
+            document.addEventListener("keydown", handleKeyDown);
+            window.addEventListener("blur", close);
+            window.addEventListener("scroll", close, { passive: true });
+        }, 0);
+
+        return () => {
+            window.clearTimeout(id);
+            document.removeEventListener("pointerdown", handlePointerDown);
+            document.removeEventListener("keydown", handleKeyDown);
+            window.removeEventListener("blur", close);
+            window.removeEventListener("scroll", close);
+        };
+    }, [menu]);
+
+    const handleContextMenu = (event: MouseEvent<HTMLButtonElement>) => {
+        if (!canRemove) return;
+        // Suppress the native browser context menu and open our Delete
+        // affordance pinned to the exact viewport coordinates of the click.
+        event.preventDefault();
+        setMenu({ x: event.clientX, y: event.clientY });
+    };
+
+    const handleDelete = () => {
+        setMenu(null);
+        onRemove();
+    };
+
     return (
-        <div className="group relative">
+        <div className="relative">
             <button
                 type="button"
                 onClick={onSelect}
+                onContextMenu={canRemove ? handleContextMenu : undefined}
                 aria-current={selected ? "true" : undefined}
+                aria-label={`${city.name}${summary ? `, ${summary.condition}` : ""}`}
                 className={`relative isolate flex h-24 w-full flex-col justify-between overflow-hidden rounded-2xl p-3 text-left text-white ${
-                    selected ? "ring-2 ring-white/70" : ""
+                    selected ? "ring-3 ring-white/30" : ""
                 }`}
                 style={{
                     background: summary
@@ -117,16 +176,38 @@ export default function CityCard({
                 </div>
             </button>
 
-            {canRemove && (
-                <button
-                    type="button"
-                    onClick={onRemove}
-                    aria-label={`Remove ${city.name}`}
-                    className="absolute -top-1.5 -left-1.5 z-30 hidden size-5 items-center justify-center rounded-full bg-black/60 text-white group-focus-within:flex group-hover:flex hover:bg-black/80"
-                >
-                    <X size={11} weight="bold" />
-                </button>
-            )}
+            {/*
+             * Right-click "Delete" affordance.
+             *
+             * Rendered via a portal into document.body so it isn't clipped by
+             * the card's `overflow-hidden`. Pinned to the exact viewport
+             * coordinates of the right-click (`event.clientX/clientY`), with a
+             * small `translate(8px, -50%)` so the cursor lands just inside the
+             * button's left edge and the button is vertically centered on the
+             * click point — same UX as a native context menu.
+             *
+             * The frosted dark glass treatment matches the DetailPopover
+             * aesthetic and stays readable over any weather video.
+             */}
+            {menu &&
+                createPortal(
+                    <button
+                        ref={menuRef}
+                        type="button"
+                        onClick={handleDelete}
+                        onPointerDown={(event) => event.stopPropagation()}
+                        className="fixed z-50 flex items-center gap-1.5 rounded-lg border border-white/15 bg-black/50 px-2.5 py-1.5 text-xs font-medium text-white shadow-lg transition-colors duration-150 hover:bg-black/80 supports-[backdrop-filter]:bg-black/55 supports-[backdrop-filter]:backdrop-blur-md supports-[backdrop-filter]:hover:bg-black/65"
+                        style={{
+                            left: menu.x,
+                            top: menu.y,
+                            transform: "translate(8px, -50%)",
+                        }}
+                    >
+                        <Trash size={12} weight="light" />
+                        Delete
+                    </button>,
+                    document.body
+                )}
         </div>
     );
 }
