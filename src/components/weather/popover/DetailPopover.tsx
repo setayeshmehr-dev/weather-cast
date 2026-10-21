@@ -281,9 +281,9 @@ export default function DetailPopover({
                 <div
                     className={`relative flex h-full flex-col overflow-hidden border border-white/10 text-white shadow-2xl
                         bg-[#0f0f14]/70
-                        supports-[backdrop-filter]:bg-[#0f0f14]/55
-                        supports-[backdrop-filter]:backdrop-blur-2xl
-                        supports-[backdrop-filter]:backdrop-saturate-[1.8]
+                        supports-backdrop-filter:bg-[#0f0f14]/55
+                        supports-backdrop-filter:backdrop-blur-2xl
+                        supports-backdrop-filter:backdrop-saturate-[1.8]
                         ${mobile ? "rounded-t-[28px]" : "rounded-[22px]"}`}
                 >
                     {/* 1px lit-glass hairline along the very top edge of the panel */}
@@ -346,7 +346,7 @@ export default function DetailPopover({
                      * default thick bar) + `scrollbar-color` (thumb + track).
                      */}
                     <div
-                        className="min-h-0 flex-1 overflow-y-auto overscroll-none [overscroll-behavior:none] [-webkit-overflow-scrolling:auto]
+                        className="min-h-0 flex-1 overflow-y-auto overscroll-none [-webkit-overflow-scrolling:auto]
                             [&::-webkit-scrollbar]:w-1.5
                             [&::-webkit-scrollbar]:bg-transparent
                             [&::-webkit-scrollbar-thumb]:rounded-full
@@ -355,7 +355,7 @@ export default function DetailPopover({
                             [&::-webkit-scrollbar-thumb:active]:bg-white/25
                             [&::-webkit-scrollbar-track]:bg-transparent
                             [&::-webkit-scrollbar-track:hover]:bg-transparent
-                            [scrollbar-width:thin]
+                            scrollbar-thin
                             [scrollbar-color:rgba(255,255,255,0.15)_transparent]"
                     >
                         {children}
