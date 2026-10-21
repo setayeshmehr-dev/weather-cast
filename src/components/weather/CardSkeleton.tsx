@@ -7,7 +7,7 @@ export type CardSkeletonVariant =
     | "gauge";
 
 const ROWS = Array.from({ length: 10 }, (_, index) => index);
-const HOURS = Array.from({ length: 12 }, (_, index) => index);
+const HOURS = Array.from({ length: 27 }, (_, index) => index);
 
 function Bone({ className = "" }: { className?: string }) {
     return (
@@ -32,7 +32,7 @@ export default function CardSkeleton({ variant }: CardSkeletonProps) {
                     >
                         <Bone className="h-3.5 w-8" />
                         <Bone className="size-10 rounded-full" />
-                        <Bone className="h-5 w-9" />
+                        <Bone className="h-5  w-9" />
                     </div>
                 ))}
             </div>
