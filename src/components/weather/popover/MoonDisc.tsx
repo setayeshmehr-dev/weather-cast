@@ -12,12 +12,19 @@ const MOON_SCALE = 1.19;
  * The dark region (lit side on the right): everything left of the terminator,
  * which is an elliptical arc. The limb is never part of the shape, so the blur
  * only softens the terminator.
+ *
+ * Astronomically, the moon's terminator is a great circle on the lunar surface.
+ * Projected onto our 2D view of the disc, it becomes an ellipse that ALWAYS
+ * passes through the moon's north and south poles — i.e. the top and bottom of
+ * the disc at (50, 0) and (50, 100). The arc's vertical radius is therefore 50
+ * (= the disc's radius), not 48, so the shadow's tip reaches the actual poles
+ * instead of stopping 2px short.
  */
 function shadowRegion(illumination: number): string {
-    const radiusX = 48 * Math.abs(1 - 2 * illumination);
+    const radiusX = 50 * Math.abs(1 - 2 * illumination);
     const sweep = illumination > 0.5 ? 0 : 1;
 
-    return `M 50 2 A ${radiusX.toFixed(2)} 48 0 0 ${sweep} 50 98 L 50 112 L -30 112 L -30 -12 L 50 -12 Z`;
+    return `M 50 0 A ${radiusX.toFixed(2)} 50 0 0 ${sweep} 50 100 L 50 114 L -30 114 L -30 -14 L 50 -14 Z`;
 }
 
 type MoonDiscProps = {
@@ -36,6 +43,16 @@ export default function MoonDisc({ phase, className = "" }: MoonDiscProps) {
 
     const illumination = (1 - Math.cos(2 * Math.PI * phase)) / 2;
     const waxing = phase < 0.5;
+
+    // At exactly full moon the shadow's geometric area collapses to a 1px line
+    // along the limb (the terminator arc coincides with the disc's left edge),
+    // but the Gaussian blur (stdDeviation 1.8) keeps bleeding a faint dark band
+    // onto the disc — that is the "always-present shadow" visible at full moon.
+    // We fade the shadow's opacity to zero as illumination approaches 1.0 so the
+    // disc looks fully lit at the peak of the cycle. The fade window (0.02) is
+    // narrow enough not to affect the visible shadow at any other phase.
+    const shadowOpacity =
+        0.8 * Math.max(0, Math.min(1, (1 - illumination) / 0.02));
 
     return (
         <div
@@ -70,7 +87,7 @@ export default function MoonDisc({ phase, className = "" }: MoonDiscProps) {
                     <path
                         d={shadowRegion(illumination)}
                         fill="#070b1c"
-                        fillOpacity={0.8}
+                        fillOpacity={shadowOpacity}
                         filter={`url(#${softId})`}
                     />
                 </svg>

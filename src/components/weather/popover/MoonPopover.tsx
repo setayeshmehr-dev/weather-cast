@@ -156,7 +156,7 @@ export default function MoonPopover({
             onClose={onClose}
         >
             <div className="flex justify-center px-4 pt-2">
-                <MoonDisc phase={phase} className="size-[200px]" />
+                <MoonDisc phase={phase} className="size-50" />
             </div>
 
             <div className="relative px-4 pt-4 text-center">
@@ -168,7 +168,7 @@ export default function MoonPopover({
                             setOffsetHours(0);
                             setMonthOverride(null);
                         }}
-                        className="absolute top-1/2 left-4 flex size-9 -translate-y-1/2 items-center justify-center rounded-full border-2 border-[#5ac8fa] text-[#5ac8fa] hover:bg-[#5ac8fa]/10"
+                        className="absolute top-8 left-4 flex size-7 -translate-y-1/2 items-center justify-center rounded-full border-2 border-[#5ac8fa] text-[#5ac8fa] hover:bg-[#5ac8fa]/10"
                     >
                         <ArrowLeft size={18} weight="bold" />
                     </button>
