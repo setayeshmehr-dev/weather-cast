@@ -1,7 +1,7 @@
 "use client";
 
 import { MagnifyingGlass, SidebarSimple, XCircle } from "@phosphor-icons/react";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 
@@ -81,7 +81,6 @@ export default function Sidebar({
     const now = useNow();
     const search = useCitySearch(query);
 
-    // Drag-and-drop is only active in the (non-searching) city-list view.
     const drag = useDragReorder(cities, onReorderCities);
 
     const trimmed = query.trim();
@@ -98,50 +97,43 @@ export default function Sidebar({
         }
     };
 
+    // While dragging, the dragged card is filtered out of the rendered list
+    // (no dimmed placeholder at its original position). An empty spacer <li>
+    // with the same height as the card is inserted at `dropIndex` so the
+    // other cards naturally shift to make room — iOS-Springboard style.
+    const draggingId = drag.draggingId;
+    const dropIndex = drag.dropIndex ?? -1;
+    const filteredCities = draggingId
+        ? cities.filter((c) => c.id !== draggingId)
+        : cities;
+
     const renderContent = () => {
         if (!searching) {
             return (
                 <ul className="flex flex-col gap-5">
-                    {cities.map((city, index) => {
-                        const isDragging = drag.draggingId === city.id;
-                        const dropAbove =
-                            drag.dropIndicator?.id === city.id &&
-                            drag.dropIndicator.position === "above";
-                        const dropBelow =
-                            drag.dropIndicator?.id === city.id &&
-                            drag.dropIndicator.position === "below";
+                    {filteredCities.map((city, index) => (
+                        <Fragment key={city.id}>
+                            {/*
+                             * Spacer — an empty <li> with the same height as
+                             * a card. It has no `data-draggable-id`, so the
+                             * hook's `computeDropIndex` ignores it (correctly).
+                             * Its sole job is to push the cards below it
+                             * downward via flexbox reflow.
+                             */}
+                            {index === dropIndex && (
+                                <li
+                                    className="h-24 list-none"
+                                    aria-hidden="true"
+                                />
+                            )}
 
-                        return (
                             <li
-                                key={city.id}
                                 data-draggable-id={city.id}
-                                className="relative list-none"
+                                className="list-none"
                             >
-                                {/*
-                                 * Drop indicator line (above). Sits in the
-                                 * middle of the 20px gap between cards
-                                 * (-top-2.5 = -10px). The shadow glow makes
-                                 * it pop against any weather background.
-                                 */}
-                                {dropAbove && (
-                                    <span
-                                        aria-hidden="true"
-                                        className="absolute h-0.5 -top-2.5 left-3 right-3 z-40  rounded-full bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.7)]"
-                                    />
-                                )}
-
-                                {/*
-                                 * The card wrapper carries the pointer-down
-                                 * handler for drag. When this card is the
-                                 * dragged one, the wrapper is rendered but
-                                 * the CityCard inside is dimmed to 30%
-                                 * (placeholder look) — the floating clone
-                                 * (rendered at the bottom of the component)
-                                 * shows the full-opacity version.
-                                 */}
                                 <div
                                     onPointerDown={(event) =>
-                                        drag.onItemPointerDown(city.id, index, event)
+                                        drag.onItemPointerDown(city.id, event)
                                     }
                                 >
                                     <CityCard
@@ -152,21 +144,21 @@ export default function Sidebar({
                                         canRemove={cities.length > 1}
                                         onSelect={() => onSelectCity(city)}
                                         onRemove={() => onRemoveCity(city.id)}
-                                        isDragging={isDragging}
                                         suppressClick={drag.wasDragging}
                                     />
                                 </div>
-
-                                {/* Drop indicator line (below). */}
-                                {dropBelow && (
-                                    <span
-                                        aria-hidden="true"
-                                        className="absolute -bottom-2.5 left-3 right-3 z-40 h-0.5 rounded-full bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.7)]"
-                                    />
-                                )}
                             </li>
-                        );
-                    })}
+                        </Fragment>
+                    ))}
+
+                    {/*
+                     * Spacer at the very end — when the cursor is below all
+                     * cards, dropIndex === filteredCities.length, and the
+                     * spacer appears after the last card.
+                     */}
+                    {dropIndex === filteredCities.length && dropIndex >= 0 && (
+                        <li className="h-24 list-none" aria-hidden="true" />
+                    )}
                 </ul>
             );
         }
@@ -221,7 +213,6 @@ export default function Sidebar({
         );
     };
 
-    // The dragged city, looked up once so we don't refind it inside the JSX.
     const draggedCity =
         drag.draggingId !== null
             ? cities.find((c) => c.id === drag.draggingId) ?? null
@@ -284,11 +275,11 @@ export default function Sidebar({
              * It follows the cursor using the offset captured at drag start
              * (so the cursor stays at the same spot on the card the whole
              * time), and is enlarged by 5% with a strong drop shadow for the
-             * "lifted off the surface" look Apple Weather uses.
+             * "lifted off the surface" look iOS Springboard uses.
              *
              * `pointer-events-none` is critical — it lets pointermove events
-             * pass through the clone to the cards beneath, so the drop
-             * indicator stays accurate.
+             * pass through the clone to the cards beneath, so the dropIndex
+             * stays accurate.
              */}
             {drag.draggingId !== null &&
                 drag.pointerPosition !== null &&

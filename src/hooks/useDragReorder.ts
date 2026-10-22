@@ -13,7 +13,13 @@ type DragState = {
     pointerOffset: { x: number; y: number };
     pointerPosition: { x: number; y: number };
     cardRect: { width: number; height: number };
-    dropIndicator: { id: string; position: "above" | "below" } | null;
+    /**
+     * Index in the FILTERED list (excluding the dragged card) where the
+     * dragged card would land if released right now. The Sidebar renders
+     * an empty spacer `<li>` at this index — the other cards naturally
+     * shift to make room, achieving the iOS-Springboard "live shift" effect.
+     */
+    dropIndex: number;
 };
 
 type PendingDrag = {
@@ -31,11 +37,10 @@ export type UseDragReorderReturn = {
     pointerPosition: { x: number; y: number } | null;
     pointerOffset: { x: number; y: number };
     cardRect: { width: number; height: number } | null;
-    dropIndicator: { id: string; position: "above" | "below" } | null;
+    dropIndex: number | null;
     wasDragging: boolean;
     onItemPointerDown: (
         id: string,
-        index: number,
         event: ReactPointerEvent<HTMLDivElement>
     ) => void;
 };
@@ -61,50 +66,63 @@ export function useDragReorder<T extends Item>(
         dragRef.current = drag;
     }, [drag]);
 
-    const computeDropIndicator = useCallback(
-        (pointerY: number, draggingId: string) => {
+    /**
+     * Compute the live drop index — the position in the filtered list
+     * (excluding the dragged card) where the dragged card would land if
+     * released at the current pointer Y.
+     *
+     * For each non-dragged card, in DOM order:
+     *   - If pointer Y is above the card's top → insert before it (return i)
+     *   - If pointer Y is on the card:
+     *       - upper half → insert before it (return i)
+     *       - lower half → insert after it (return i + 1)
+     *
+     * If pointer Y is below all cards → insert at the end
+     * (return filtered.length).
+     *
+     * When the dragged card is still in the DOM (right when the threshold
+     * is met, before React re-renders), it's skipped — but the cursor is
+     * typically within its bounds, so the loop falls through to the next
+     * card below it, which gives the correct "no-op" dropIndex matching
+     * the dragged card's original position.
+     */
+    const computeDropIndex = useCallback(
+        (pointerY: number, draggingId: string): number => {
             const cards =
                 document.querySelectorAll<HTMLElement>("[data-draggable-id]");
-            for (const c of Array.from(cards)) {
-                const cid = c.getAttribute("data-draggable-id");
-                if (!cid || cid === draggingId) continue;
+            const filtered = Array.from(cards).filter(
+                (c) => c.getAttribute("data-draggable-id") !== draggingId
+            );
 
-                const r = c.getBoundingClientRect();
-                if (pointerY < r.top || pointerY > r.bottom) continue;
+            for (let i = 0; i < filtered.length; i++) {
+                const r = filtered[i].getBoundingClientRect();
 
-                const isUpperHalf = pointerY < r.top + r.height / 2;
-                return { id: cid, position: isUpperHalf ? ("above" as const) : ("below" as const) };
+                if (pointerY < r.top) return i;
+
+                if (pointerY >= r.top && pointerY <= r.bottom) {
+                    const isUpperHalf = pointerY < r.top + r.height / 2;
+                    return isUpperHalf ? i : i + 1;
+                }
             }
-            return null;
-        },
-        []
-    );
 
-    const computeToIndex = useCallback(
-        (fromIndex: number, targetId: string, position: "above" | "below") => {
-            const items = itemsRef.current;
-            const targetIndex = items.findIndex((c) => c.id === targetId);
-            if (targetIndex === -1) return null;
-            if (targetIndex === fromIndex) return fromIndex;
-
-            const insertionPoint =
-                position === "above" ? targetIndex : targetIndex + 1;
-            return fromIndex < insertionPoint
-                ? insertionPoint - 1
-                : insertionPoint;
+            return filtered.length;
         },
         []
     );
 
     const onItemPointerDown = useCallback(
-        (id: string, index: number, event: ReactPointerEvent<HTMLDivElement>) => {
+        (id: string, event: ReactPointerEvent<HTMLDivElement>) => {
             if (event.button !== 0) return;
+
+            // Look up the original index of the dragged item in the items
+            // array. We pass just the id from the Sidebar — the hook owns
+            // the index lookup so the Sidebar doesn't have to compute it.
+            const index = itemsRef.current.findIndex((item) => item.id === id);
+            if (index === -1) return;
 
             const card = event.currentTarget;
             const rect = card.getBoundingClientRect();
 
-            // FIX #1: explicit nullable type so we can set `current = null`
-            // once the threshold is met.
             const pendingRef: { current: PendingDrag | null } = {
                 current: {
                     id,
@@ -117,9 +135,6 @@ export function useDragReorder<T extends Item>(
                 },
             };
 
-            // FIX #2: use the global DOM `PointerEvent` type (not React's)
-            // because these listeners go on `window`, which expects the DOM
-            // PointerEvent interface.
             const handleMove = (e: PointerEvent) => {
                 const p = pendingRef.current;
 
@@ -134,7 +149,7 @@ export function useDragReorder<T extends Item>(
                         pointerOffset: { x: p.offsetX, y: p.offsetY },
                         pointerPosition: { x: e.clientX, y: e.clientY },
                         cardRect: p.cardRect,
-                        dropIndicator: computeDropIndicator(e.clientY, p.id),
+                        dropIndex: computeDropIndex(e.clientY, p.id),
                     };
                     setDrag(initial);
                     dragRef.current = initial;
@@ -151,7 +166,7 @@ export function useDragReorder<T extends Item>(
                 setDrag({
                     ...d,
                     pointerPosition: { x: e.clientX, y: e.clientY },
-                    dropIndicator: computeDropIndicator(e.clientY, d.draggingId),
+                    dropIndex: computeDropIndex(e.clientY, d.draggingId),
                 });
             };
 
@@ -163,15 +178,20 @@ export function useDragReorder<T extends Item>(
                 const d = dragRef.current;
                 if (!d) return;
 
-                if (d.dropIndicator) {
-                    const toIndex = computeToIndex(
-                        d.fromIndex,
-                        d.dropIndicator.id,
-                        d.dropIndicator.position
-                    );
-                    if (toIndex !== null && toIndex !== d.fromIndex) {
-                        onReorderRef.current(d.fromIndex, toIndex);
-                    }
+                /*
+                 * dropIndex is the index in the FILTERED array (after removal).
+                 * The store's reorderCities does:
+                 *   splice(from, 1)  → array shrinks by 1
+                 *   splice(to, 0, x) → x goes to position `to` in the new array
+                 * So `to = dropIndex` is exactly what the store expects.
+                 *
+                 * If dropIndex === fromIndex, the dragged card lands at its
+                 * original position — a no-op. We skip the onReorder call
+                 * entirely so the store doesn't trigger an unnecessary
+                 * state update + localStorage write.
+                 */
+                if (d.dropIndex !== d.fromIndex) {
+                    onReorderRef.current(d.fromIndex, d.dropIndex);
                 }
 
                 setDrag(null);
@@ -191,11 +211,15 @@ export function useDragReorder<T extends Item>(
                 document.body.style.userSelect = "";
             };
 
-            window.addEventListener("pointermove", handleMove, { passive: true });
+            window.addEventListener("pointermove", handleMove, {
+                passive: true,
+            });
             window.addEventListener("pointerup", handleUp, { passive: true });
-            window.addEventListener("pointercancel", handleUp, { passive: true });
+            window.addEventListener("pointercancel", handleUp, {
+                passive: true,
+            });
         },
-        [computeDropIndicator, computeToIndex]
+        [computeDropIndex]
     );
 
     return {
@@ -203,7 +227,7 @@ export function useDragReorder<T extends Item>(
         pointerPosition: drag?.pointerPosition ?? null,
         pointerOffset: drag?.pointerOffset ?? { x: 0, y: 0 },
         cardRect: drag?.cardRect ?? null,
-        dropIndicator: drag?.dropIndicator ?? null,
+        dropIndex: drag?.dropIndex ?? null,
         wasDragging,
         onItemPointerDown,
     };

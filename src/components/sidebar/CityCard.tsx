@@ -38,12 +38,6 @@ type CityCardProps = {
     canRemove: boolean;
     onSelect: () => void;
     onRemove: () => void;
-    /** When true, the card dims to 30% opacity to read as a placeholder
-     *  while its clone is being dragged elsewhere. */
-    isDragging?: boolean;
-    /** When true, the next click on the card is suppressed. Set this to
-     *  `wasDragging` from `useDragReorder` so the click that fires right
-     *  after a drag-release doesn't accidentally select the dragged city. */
     suppressClick?: boolean;
 };
 
@@ -55,7 +49,6 @@ export default function CityCard({
     canRemove,
     onSelect,
     onRemove,
-    isDragging = false,
     suppressClick = false,
 }: CityCardProps) {
     const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
@@ -66,28 +59,36 @@ export default function CityCard({
 
         const close = () => setMenu(null);
 
-        const handlePointerDown = (event: PointerEvent) => {
-            if (menuRef.current?.contains(event.target as Node)) return;
-            close();
-        };
-
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === "Escape") close();
         };
 
+        /*
+         * Lock body scroll while the Delete menu is open. The overlay
+         * catches all pointer events (so the sidebar's own scrollable area
+         * is also blocked — wheel/touch events land on the overlay, not on
+         * the scroll container below). Setting `overflow: hidden` on body
+         * is the belt-and-suspenders for page-level scroll.
+         *
+         * We snapshot the original inline style and restore it on cleanup
+         * so we don't clobber any other inline `overflow` set elsewhere.
+         */
+        const originalOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+
+        // Defer attaching the keydown/blur listeners by one tick so the
+        // same right-click gesture that opened the menu doesn't immediately
+        // dismiss it via a stray event.
         const id = window.setTimeout(() => {
-            document.addEventListener("pointerdown", handlePointerDown);
             document.addEventListener("keydown", handleKeyDown);
             window.addEventListener("blur", close);
-            window.addEventListener("scroll", close, { passive: true });
         }, 0);
 
         return () => {
             window.clearTimeout(id);
-            document.removeEventListener("pointerdown", handlePointerDown);
             document.removeEventListener("keydown", handleKeyDown);
             window.removeEventListener("blur", close);
-            window.removeEventListener("scroll", close);
+            document.body.style.overflow = originalOverflow;
         };
     }, [menu]);
 
@@ -107,16 +108,15 @@ export default function CityCard({
             <button
                 type="button"
                 onClick={() => {
-                    // Suppress the click that fires right after a drag-release.
                     if (suppressClick) return;
                     onSelect();
                 }}
-                onContextMenu={canRemove && !isDragging ? handleContextMenu : undefined}
+                onContextMenu={canRemove ? handleContextMenu : undefined}
                 aria-current={selected ? "true" : undefined}
                 aria-label={`${city.name}${summary ? `, ${summary.condition}` : ""}`}
-                className={`relative isolate flex h-24 w-full flex-col justify-between overflow-hidden rounded-2xl p-3 text-left text-white transition-opacity duration-150 ${
-                    isDragging ? "opacity-30" : "opacity-100"
-                } ${selected && !isDragging ? "ring-3 ring-white/30" : ""}`}
+                className={`relative isolate flex h-24 w-full flex-col justify-between overflow-hidden rounded-2xl p-3 text-left text-white ${
+                    selected ? "ring-3 ring-white/30" : ""
+                }`}
                 style={{
                     background: summary
                         ? getWeatherBackground(summary.weatherCode, summary.isDay)
@@ -178,23 +178,55 @@ export default function CityCard({
                 </div>
             </button>
 
+            {/*
+             * Right-click "Delete" menu with modal-style behavior.
+             *
+             * Two layers are rendered into a portal on document.body:
+             *
+             *   1. An invisible overlay (`fixed inset-0 z-40`) that catches
+             *      ALL pointer events anywhere on the page — left-click,
+             *      right-click, touch, wheel — until the menu is dismissed.
+             *      `touch-none` (touch-action: none) prevents touch scroll
+             *      from passing through to the sidebar's scrollable area.
+             *      `onContextMenu` is prevented so the browser's native
+             *      right-click menu doesn't pop up on top of our Delete button.
+             *
+             *   2. The Delete button itself (`fixed z-50`), one z-layer
+             *      above the overlay. Pointer events on the button call
+             *      `handleDelete`; pointer events anywhere else land on the
+             *      overlay and dismiss the menu.
+             *
+             * Body scroll is also locked via `document.body.style.overflow
+             * = "hidden"` in the useEffect above — that catches any
+             * keyboard-driven scroll (Page Down, Space) that the overlay
+             * wouldn't intercept.
+             */}
             {menu &&
                 createPortal(
-                    <button
-                        ref={menuRef}
-                        type="button"
-                        onClick={handleDelete}
-                        onPointerDown={(event) => event.stopPropagation()}
-                        className="fixed z-50 flex items-center gap-1.5 rounded-lg border border-white/15 bg-black/70 px-2.5 py-1.5 text-xs font-medium text-white shadow-lg transition-colors duration-150 hover:bg-black/80 supports-[backdrop-filter]:bg-black/55 supports-[backdrop-filter]:backdrop-blur-md supports-[backdrop-filter]:hover:bg-black/65"
-                        style={{
-                            left: menu.x,
-                            top: menu.y,
-                            transform: "translate(8px, -50%)",
-                        }}
-                    >
-                        <Trash size={14} weight="fill" />
-                        Delete
-                    </button>,
+                    <>
+                        <div
+                            aria-hidden="true"
+                            className="fixed inset-0 z-40 touch-none"
+                            onPointerDown={() => setMenu(null)}
+                            onContextMenu={(event) => event.preventDefault()}
+                        />
+
+                        <button
+                            ref={menuRef}
+                            type="button"
+                            onClick={handleDelete}
+                            onContextMenu={(event) => event.preventDefault()}
+                            className="fixed z-50 flex items-center gap-1.5 rounded-lg border border-white/15 bg-black/70 px-2.5 py-1.5 text-xs font-medium text-white shadow-lg transition-colors duration-150 hover:bg-black/80 supports-backdrop-filter:bg-black/55 supports-backdrop-filter:backdrop-blur-md supports-backdrop-filter:hover:bg-black/65"
+                            style={{
+                                left: menu.x,
+                                top: menu.y,
+                                transform: "translate(8px, -50%)",
+                            }}
+                        >
+                            <Trash size={14} weight="fill" />
+                            Delete
+                        </button>
+                    </>,
                     document.body
                 )}
         </div>

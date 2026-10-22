@@ -1,8 +1,7 @@
 "use client";
 
 import { Plus, SidebarSimple } from "@phosphor-icons/react";
-import { useRef, useState } from "react";
-
+import { useEffect, useRef, useState } from "react";
 import Sidebar from "@/components/sidebar/Sidebar";
 import WeatherDashboard from "@/components/weather/WeatherDashboard";
 import { useCities } from "@/hooks/useCities";
@@ -11,12 +10,20 @@ import type { City } from "@/lib/cities";
 import { preloadWeatherVideo } from "@/lib/preloadVideo";
 import { getWeatherVideoName, getWeatherVideoUrls } from "@/lib/weatherVideo";
 
+
 const MOBILE_QUERY = "(max-width: 767px)";
 
 const FLOATING_BUTTON_CLASS =
     "flex size-10 items-center justify-center rounded-full border border-white/20 bg-white/15 text-white backdrop-blur-md transition-colors hover:bg-white/25";
 
 export default function Home() {
+
+    const [hydrated, setHydrated] = useState(false);
+
+    useEffect(() => {
+        setHydrated(true);
+    }, []);
+
     const {
         cities,
         selectedCity,
@@ -128,34 +135,32 @@ export default function Home() {
                 </div>
             </aside>
 
-            <div className="relative min-w-0 flex-1 overflow-y-auto">
-                <div className="sticky top-0 z-20 h-0">
-                    <div className="flex items-center gap-2 p-3">
-                        {!sidebarOpen && (
-                            <button
-                                type="button"
-                                onClick={() => setSidebarOpen(true)}
-                                aria-label="Show sidebar"
-                                className={FLOATING_BUTTON_CLASS}
-                            >
-                                <SidebarSimple size={20} />
-                            </button>
-                        )}
+                        <div className="relative min-w-0 flex-1 overflow-hidden">
+                <div className="absolute top-0 left-0 z-30 flex items-center gap-2 p-3">
+                    {!sidebarOpen && (
+                        <button
+                            type="button"
+                            onClick={() => setSidebarOpen(true)}
+                            aria-label="Show sidebar"
+                            className={FLOATING_BUTTON_CLASS}
+                        >
+                            <SidebarSimple size={20} />
+                        </button>
+                    )}
 
-                        {!isSelectedSaved && (
-                            <button
-                                type="button"
-                                onClick={handleAddCity}
-                                aria-label={`Add ${selectedCity.name} to the list`}
-                                className={FLOATING_BUTTON_CLASS}
-                            >
-                                <Plus size={20} weight="bold" />
-                            </button>
-                        )}
-                    </div>
+                    {!isSelectedSaved && (
+                        <button
+                            type="button"
+                            onClick={handleAddCity}
+                            aria-label={`Add ${selectedCity.name} to the list`}
+                            className={FLOATING_BUTTON_CLASS}
+                        >
+                            <Plus size={20} weight="bold" />
+                        </button>
+                    )}
                 </div>
 
-                <WeatherDashboard city={selectedCity} />
+                {hydrated && <WeatherDashboard city={selectedCity} />}
             </div>
         </div>
     );

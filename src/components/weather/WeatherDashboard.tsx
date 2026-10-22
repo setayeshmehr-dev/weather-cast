@@ -36,6 +36,8 @@ import type { City } from "@/lib/cities";
 import AveragesPopover from "@/components/weather/popover/AveragesPopover";
 import MoonPopover from "@/components/weather/popover/MoonPopover";
 import SunrisePopover from "@/components/weather/popover/SunrisePopover";
+import HeroHeader from "@/components/weather/HeroHeader";
+import WeatherScrollLayout from "@/components/weather/WeatherScrollLayout";
 
 const tenDayClassName =
     "col-span-2 row-span-3 @min-[624px]:col-start-1 @min-[624px]:row-start-1";
@@ -96,47 +98,19 @@ export default function WeatherDashboard({ city }: WeatherDashboardProps) {
                     cloudCover={current?.cloudCover ?? null}
                 />
 
-                <main className="@container relative z-10 px-4 py-6">
+                <WeatherScrollLayout
+                    hero={
+                        <HeroHeader
+                            cityName={city.name}
+                            current={current}
+                            loading={loading}
+                            error={error}
+                            onRetry={retry}
+                        />
+                    }
+                >
                     <div className="@container mx-auto w-full @min-[624px]:max-w-156 @min-[944px]:max-w-236">
-                        <section className="my-8 flex flex-col items-center justify-center text-center text-white sm:my-10">
-                            <h1 className="text-[34px] leading-tight">
-                                {city.name}
-                            </h1>
-
-                            {loading && (
-                                <p className="mt-4 text-white/70">
-                                    Loading weather...
-                                </p>
-                            )}
-
-                            {error && (
-                                <div role="alert" className="mt-4 flex flex-col items-center gap-3 text-white/80">
-                                    <p>{error}</p>
-
-                                    <button
-                                        type="button"
-                                        onClick={retry}
-                                        className="rounded-full border border-white/30 bg-white/15 px-4 py-1.5 text-sm text-white backdrop-blur-md transition-colors hover:bg-white/25"
-                                    >
-                                        Try again
-                                    </button>
-                                </div>
-                            )}
-
-                            {!loading && !error && current && (
-                                <>
-                                    <p className="mt-1 text-[96px] leading-none font-extralight">
-                                        {Math.round(current.temperature)}°
-                                    </p>
-                                    <p className="mt-2 text-xl">
-                                        {current.condition}
-                                    </p>
-                                    <p className="text-xl">
-                                        H:{Math.round(current.max)}° L:{Math.round(current.min)}°
-                                    </p>
-                                </>
-                            )}
-                        </section>
+                        
 
                         <DetailTrigger
                             label="Show hourly conditions"
@@ -431,7 +405,7 @@ export default function WeatherDashboard({ city }: WeatherDashboardProps) {
 
                         <WeatherIconStyleToggle />
                     </div>
-                </main>
+                </WeatherScrollLayout>
             </WeatherIconProvider>
         </WeatherLoadingContext.Provider>
     );
