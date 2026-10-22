@@ -73,8 +73,7 @@ type WeatherDashboardProps = {
 };
 
 export default function WeatherDashboard({ city }: WeatherDashboardProps) {
-    const { current, forecast, daily, details, loading, error } = useWeather(city);
-
+    const { current, forecast, daily, details, loading, error, retry } = useWeather(city);
     const {
         airQuality,
         loading: airQualityLoading,
@@ -111,9 +110,17 @@ export default function WeatherDashboard({ city }: WeatherDashboardProps) {
                             )}
 
                             {error && (
-                                <p role="alert" className="mt-4 text-white/80">
-                                    {error}
-                                </p>
+                                <div role="alert" className="mt-4 flex flex-col items-center gap-3 text-white/80">
+                                    <p>{error}</p>
+
+                                    <button
+                                        type="button"
+                                        onClick={retry}
+                                        className="rounded-full border border-white/30 bg-white/15 px-4 py-1.5 text-sm text-white backdrop-blur-md transition-colors hover:bg-white/25"
+                                    >
+                                        Try again
+                                    </button>
+                                </div>
                             )}
 
                             {!loading && !error && current && (

@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 
+import { useDeferredStart } from "@/hooks/useDeferredStart";
 import type { City } from "@/lib/cities";
+import { fetchJson } from "@/lib/fetchJson";
 
 /** Current concentrations in µg/m³. */
 export type Pollutants = {
@@ -70,9 +72,14 @@ function getTrend(now: number, before: number | null | undefined): AirQuality["t
 export function useAirQuality(city: City) {
     const { id: key, latitude, longitude } = city;
 
+    // Starts after the main weather is ready, so the two do not compete.
+    const started = useDeferredStart();
+
     const [state, setState] = useState<AirQualityState | null>(null);
 
     useEffect(() => {
+        if (!started) return;
+
         const controller = new AbortController();
 
         async function fetchAirQuality() {
@@ -84,10 +91,9 @@ export function useAirQuality(city: City) {
                     "&hourly=european_aqi" +
                     "&past_days=1&forecast_days=1&timezone=auto";
 
-                const response = await fetch(api, { signal: controller.signal });
-                if (!response.ok) throw new Error("Failed to fetch air quality.");
-
-                const data = (await response.json()) as AirQualityResponse;
+                const data = await fetchJson<AirQualityResponse>(api, {
+                    signal: controller.signal,
+                });
                 const index = data.current.european_aqi;
 
                 if (index === null || index === undefined) {
@@ -129,7 +135,7 @@ export function useAirQuality(city: City) {
         void fetchAirQuality();
 
         return () => controller.abort();
-    }, [key, latitude, longitude]);
+    }, [key, latitude, longitude, started]);
 
     const result = state !== null && state.key === key ? state : null;
 

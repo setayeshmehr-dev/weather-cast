@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import type { City } from "@/lib/cities";
+import { fetchJson } from "@/lib/fetchJson";
 
 export type ClimateNormals = {
     /** Average daily high around this date (°C). */
@@ -95,10 +96,13 @@ async function fetchWindow(
         `&start_date=${start}&end_date=${end}` +
         "&hourly=temperature_2m&timezone=auto";
 
-    const response = await fetch(api, { signal });
-    if (!response.ok) throw new Error("Failed to fetch climate data.");
+    const data = await fetchJson<ArchiveResponse>(api, {
+        signal,
+        timeoutMs: 15_000,
+        retries: 1,
+    });
 
-    return ((await response.json()) as ArchiveResponse).hourly;
+    return data.hourly;
 }
 
 /**

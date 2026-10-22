@@ -1,10 +1,11 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
 
+import { useDeferredStart } from "@/hooks/useDeferredStart";
 import { getWeatherCondition } from "@/hooks/useWeather";
 import type { City } from "@/lib/cities";
+import { fetchJson } from "@/lib/fetchJson";
 
 export type CitySummary = {
     temperature: number;
@@ -38,9 +39,14 @@ export function useCitySummaries(cities: City[]) {
     const latitudes = cities.map((city) => city.latitude).join(",");
     const longitudes = cities.map((city) => city.longitude).join(",");
 
+    // The sidebar cards start after the main weather is ready.
+    const started = useDeferredStart();
+
     const [summaries, setSummaries] = useState<Record<string, CitySummary>>({});
 
     useEffect(() => {
+        if (!started) return;
+
         const controller = new AbortController();
         const ids = key.split("|");
 
@@ -53,10 +59,9 @@ export function useCitySummaries(cities: City[]) {
                     "&daily=temperature_2m_max,temperature_2m_min" +
                     "&forecast_days=1&timezone=auto";
 
-                const response = await fetch(api, { signal: controller.signal });
-                if (!response.ok) throw new Error("Failed to fetch city summaries.");
-
-                const json: unknown = await response.json();
+                const json = await fetchJson<unknown>(api, {
+                    signal: controller.signal,
+                });
                 const items = (Array.isArray(json) ? json : [json]) as ForecastResponse[];
 
                 const next: Record<string, CitySummary> = {};
@@ -77,16 +82,14 @@ export function useCitySummaries(cities: City[]) {
 
                 setSummaries((previous) => ({ ...previous, ...next }));
             } catch {
-                if (!controller.signal.aborted) {
-                    return;
-                }
+                // Cards without data keep showing placeholders.
             }
         }
 
         void fetchSummaries();
 
         return () => controller.abort();
-    }, [key, latitudes, longitudes]);
+    }, [key, latitudes, longitudes, started]);
 
     return summaries;
 }

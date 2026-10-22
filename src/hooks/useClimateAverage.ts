@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import type { City } from "@/lib/cities";
+import { fetchJson } from "@/lib/fetchJson";
 
 type ArchiveResponse = {
     daily: {
@@ -57,10 +58,11 @@ async function fetchHighs(
         `&start_date=${start}&end_date=${end}` +
         "&daily=temperature_2m_max&timezone=auto";
 
-    const response = await fetch(api, { signal });
-    if (!response.ok) throw new Error("Failed to fetch climate data.");
-
-    const data = (await response.json()) as ArchiveResponse;
+    const data = await fetchJson<ArchiveResponse>(api, {
+        signal,
+        timeoutMs: 15_000,
+        retries: 1,
+    });
 
     return data.daily.temperature_2m_max.filter(
         (value): value is number => value !== null

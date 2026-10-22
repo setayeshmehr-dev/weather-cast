@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { fetchJson } from "@/lib/fetchJson";
 
 import type { City } from "@/lib/cities";
 
@@ -73,10 +74,13 @@ async function fetchYear(
         `&start_date=${year}-01-01&end_date=${year}-12-31` +
         "&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto";
 
-    const response = await fetch(api, { signal });
-    if (!response.ok) throw new Error("Failed to fetch climate data.");
+        const data = await fetchJson<ArchiveResponse>(api, {
+        signal,
+        timeoutMs: 15_000,
+        retries: 1,
+    });
 
-    return ((await response.json()) as ArchiveResponse).daily;
+    return data.daily;
 }
 
 /** Monthly climate of a city over the last 5 complete years. */

@@ -47,3 +47,16 @@ export function preloadWeatherVideo(src: string): Promise<void> {
         video.load();
     });
 }
+
+/** Resolves when the image is loaded (or failed); the caller adds its own timeout. */
+export function preloadImage(src: string): Promise<void> {
+    if (typeof window === "undefined") return Promise.resolve();
+
+    return new Promise((resolve) => {
+        const image = new Image();
+
+        image.onload = () => resolve();
+        image.onerror = () => resolve();
+        image.src = src;
+    });
+}

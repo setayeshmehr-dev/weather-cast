@@ -1,8 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { City } from "@/lib/cities";
+import { openDeferredStart } from "@/lib/deferredStart";
+import { fetchJson } from "@/lib/fetchJson";
+import { readStoredWeather, writeStoredWeather } from "@/lib/weatherStore";
+import { useHydrated } from "@/hooks/useHydrated";
+
 
 export type HourlyItem = {
     kind: "hour";
@@ -126,7 +131,7 @@ type OpenMeteoResponse = {
     };
 };
 
-type ProcessedWeather = {
+export type ProcessedWeather = {
     current: CurrentWeather | null;
     forecast: ForecastItem[];
     daily: DailyItem[];
@@ -141,6 +146,9 @@ type CacheEntry = {
     fetchedAt: number;
 };
 
+/** What is needed to load the weather of a place (a City fits). */
+type Place = Pick<City, "id" | "latitude" | "longitude">;
+
 // Pressure change (hPa) over 3 hours from which the trend is rising or falling.
 const PRESSURE_TREND_THRESHOLD = 1;
 
@@ -151,6 +159,7 @@ const EMPTY_FORECAST: ForecastItem[] = [];
 const EMPTY_DAILY: DailyItem[] = [];
 
 const cache = new Map<string, CacheEntry>();
+const storageChecked = new Set<string>();
 const pendingRequests = new Map<string, Promise<ProcessedWeather>>();
 
 export function getWeatherCondition(code: number): string {
@@ -339,10 +348,10 @@ function processWeather(data: OpenMeteoResponse): ProcessedWeather {
     };
 }
 
-async function requestWeather(city: City): Promise<ProcessedWeather> {
+async function requestWeather(place: Place): Promise<ProcessedWeather> {
     const params = new URLSearchParams({
-        latitude: String(city.latitude),
-        longitude: String(city.longitude),
+        latitude: String(place.latitude),
+        longitude: String(place.longitude),
         current:
             "temperature_2m,apparent_temperature,pressure_msl,weather_code,is_day,wind_speed_10m,wind_gusts_10m,wind_direction_10m,uv_index,cloud_cover",
         hourly:
@@ -354,13 +363,9 @@ async function requestWeather(city: City): Promise<ProcessedWeather> {
         timezone: "auto",
     });
 
-    const response = await fetch(
+    const data = await fetchJson<OpenMeteoResponse>(
         `https://api.open-meteo.com/v1/forecast?${params.toString()}`
     );
-
-    if (!response.ok) throw new Error("Failed to fetch weather.");
-
-    const data = (await response.json()) as OpenMeteoResponse;
 
     if (!data.current || !data.hourly || !data.daily) {
         throw new Error("Invalid weather response.");
@@ -369,57 +374,93 @@ async function requestWeather(city: City): Promise<ProcessedWeather> {
     return processWeather(data);
 }
 
-/** The cached weather of a city, however old (or null). */
+/** Memory first, then the copy saved by an earlier visit (read once per city). */
+function getEntry(cityId: string): CacheEntry | null {
+    const memory = cache.get(cityId);
+
+    if (memory) return memory;
+
+    if (typeof window === "undefined" || storageChecked.has(cityId)) return null;
+
+    storageChecked.add(cityId);
+
+    const stored = readStoredWeather<ProcessedWeather>(cityId);
+
+    if (stored) cache.set(cityId, stored);
+
+    return stored;
+}
+
+/** The known weather of a city, however old (or null). */
 export function peekWeather(cityId: string): ProcessedWeather | null {
-    return cache.get(cityId)?.weather ?? null;
+    return getEntry(cityId)?.weather ?? null;
 }
 
 /**
- * Loads the weather of a city (shared between callers), reusing the cache when it
- * is younger than maxAgeMs. It is used to prepare a city before it is shown.
+ * Loads the weather of a city (shared between callers), reusing what is known when
+ * it is younger than maxAgeMs. It is also used to prepare a city before showing it.
  */
 export function preloadWeather(
-    city: City,
+    place: Place,
     maxAgeMs: number = MAX_AGE_MS
 ): Promise<ProcessedWeather> {
-    const entry = cache.get(city.id);
+    const entry = getEntry(place.id);
 
     if (entry && Date.now() - entry.fetchedAt < maxAgeMs) {
         return Promise.resolve(entry.weather);
     }
 
-    const pending = pendingRequests.get(city.id);
+    const pending = pendingRequests.get(place.id);
 
     if (pending) return pending;
 
-    const request = requestWeather(city)
+    const request = requestWeather(place)
         .then((weather) => {
-            cache.set(city.id, { weather, fetchedAt: Date.now() });
+            const fetchedAt = Date.now();
+
+            cache.set(place.id, { weather, fetchedAt });
+            writeStoredWeather(place.id, weather, fetchedAt);
+            openDeferredStart();
 
             return weather;
         })
         .finally(() => {
-            pendingRequests.delete(city.id);
+            pendingRequests.delete(place.id);
         });
 
-    pendingRequests.set(city.id, request);
+    pendingRequests.set(place.id, request);
 
     return request;
 }
 
 export function useWeather(city: City) {
-    const { id: key } = city;
+    const { id: key, latitude, longitude } = city;
 
     const [state, setState] = useState<WeatherState | null>(null);
+    const [attempt, setAttempt] = useState(0);
+    const hydrated = useHydrated();
+
 
     useEffect(() => {
         let cancelled = false;
+        const place: Place = { id: key, latitude, longitude };
+
+        // Weather from an earlier visit is already on screen: other data can start too.
+        if (peekWeather(key) !== null) openDeferredStart();
 
         async function load() {
             try {
-                const weather = await preloadWeather(city);
+                const weather = await preloadWeather(place);
 
-                if (!cancelled) setState({ ...weather, key });
+                if (cancelled) return;
+
+                setState((previous) =>
+                    previous !== null &&
+                    previous.key === key &&
+                    previous.current === weather.current
+                        ? previous
+                        : { ...weather, key }
+                );
             } catch {
                 // A failed refresh keeps showing the data we already have.
                 if (!cancelled && peekWeather(key) === null) {
@@ -437,17 +478,31 @@ export function useWeather(city: City) {
 
         void load();
 
-        const interval = window.setInterval(() => void load(), MAX_AGE_MS);
+        const refresh = () => {
+            if (!document.hidden) void load();
+        };
+
+        const interval = window.setInterval(refresh, MAX_AGE_MS);
+
+        window.addEventListener("online", refresh);
+        document.addEventListener("visibilitychange", refresh);
 
         return () => {
             cancelled = true;
             window.clearInterval(interval);
+            window.removeEventListener("online", refresh);
+            document.removeEventListener("visibilitychange", refresh);
         };
-    }, [city, key]);
+    }, [key, latitude, longitude, attempt]);
 
-    // Cached data is shown immediately (no skeleton flash when switching city);
-    // the effect above refreshes it when it is old.
-    const cached = peekWeather(key);
+    const retry = useCallback(() => {
+        setState(null);
+        setAttempt((count) => count + 1);
+    }, []);
+
+    // Known data is shown immediately (no skeleton flash when switching city or
+    // coming back the next day); the effect above refreshes it when it is old.
+    const cached = hydrated ? peekWeather(key) : null;
     const result =
         state !== null && state.key === key
             ? state
@@ -462,5 +517,6 @@ export function useWeather(city: City) {
         details: result?.details ?? null,
         loading: result === null,
         error: result?.error ?? null,
+        retry,
     };
 }
