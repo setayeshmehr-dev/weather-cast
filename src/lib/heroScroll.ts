@@ -11,8 +11,7 @@ export const HERO_TEMP_HEIGHT = 96;
 // Distance between the expanded header and the first card.
 export const HERO_GAP = 32;
 
-// Cards fade out over this distance, just before the bottom of the header.
-export const HERO_FADE = 32;
+
 
 /** Height of the header when everything is shown. */
 export const HERO_FULL_HEIGHT =

@@ -39,6 +39,7 @@ import SunrisePopover from "@/components/weather/popover/SunrisePopover";
 import HeroHeader from "@/components/weather/HeroHeader";
 import WeatherScrollLayout from "@/components/weather/WeatherScrollLayout";
 
+
 const tenDayClassName =
     "col-span-2 row-span-3 @min-[624px]:col-start-1 @min-[624px]:row-start-1";
 const mapClassName =
@@ -403,7 +404,7 @@ export default function WeatherDashboard({ city }: WeatherDashboardProps) {
                         </DetailTrigger>
                         </section>
 
-                        <WeatherIconStyleToggle />
+                        
                     </div>
                 </WeatherScrollLayout>
             </WeatherIconProvider>

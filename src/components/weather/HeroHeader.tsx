@@ -10,10 +10,6 @@ import {
     HERO_TOP,
 } from "@/lib/heroScroll";
 
-// true: the line under the temperature is "Feels Like: 43°" (as in the reference);
-// false: it is the weather condition ("Partly cloudy").
-const SHOW_FEELS_LIKE = true;
-
 type LineProps = {
     /** CSS variable (set by the scroll layout) with the share of the line still shown. */
     variable: string;
@@ -38,7 +34,11 @@ function Line({ variable, height, direction, hidden, children }: LineProps) {
         <div
             aria-hidden={hidden}
             className="flex w-full justify-center overflow-hidden"
-            style={{ height: `calc(${height}px * var(${variable}))`, opacity }}
+            style={{
+                height: `calc(${height}px * var(${variable}))`,
+                opacity,
+                willChange: "height, opacity",
+            }}
         >
             <div
                 className="flex shrink-0 items-start justify-center"
@@ -65,12 +65,6 @@ export default function HeroHeader({
     error,
     onRetry,
 }: HeroHeaderProps) {
-    const status = current
-        ? SHOW_FEELS_LIKE
-            ? { label: "Feels Like:", value: `${Math.round(current.feelsLike)}°` }
-            : { label: "", value: current.condition }
-        : null;
-
     return (
         <div
             className="flex flex-col items-center text-center text-white"
@@ -101,7 +95,7 @@ export default function HeroHeader({
                         Try again
                     </button>
                 </div>
-            ) : loading || !current || !status ? (
+            ) : loading || !current ? (
                 <p className="mt-3 text-white/70">Loading weather...</p>
             ) : (
                 <>
@@ -115,16 +109,14 @@ export default function HeroHeader({
                         </span>
                     </Line>
 
+                    {/* وضعیت هوا: Partly cloudy / Overcast / Clear / ... */}
                     <Line
                         variable="--hero-status"
                         height={HERO_LINE_HEIGHT}
                         direction="out"
                     >
-                        <span className="text-xl font-semibold">
-                            {status.label && (
-                                <span className="text-white/85">{status.label} </span>
-                            )}
-                            {status.value}
+                        <span className="text-xl font-semibold text-white/90">
+                            {current.condition}
                         </span>
                     </Line>
 
@@ -138,7 +130,7 @@ export default function HeroHeader({
                         </span>
                     </Line>
 
-                    {/* The one-line version: it replaces the big temperature and the status. */}
+                    {/* نسخه‌ی یک‌خطی: دما | وضعیت هوا */}
                     <Line
                         variable="--hero-compact"
                         height={HERO_LINE_HEIGHT}
@@ -148,10 +140,7 @@ export default function HeroHeader({
                         <span className="flex items-center text-xl font-semibold">
                             {Math.round(current.temperature)}°
                             <span className="mx-3 h-5 w-0.5 rounded-full bg-white/90" />
-                            {status.label && (
-                                <span className="mr-1.5 text-white/85">{status.label}</span>
-                            )}
-                            {status.value}
+                            <span className="text-white/90">{current.condition}</span>
                         </span>
                     </Line>
                 </>
