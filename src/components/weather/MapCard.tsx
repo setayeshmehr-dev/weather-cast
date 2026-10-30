@@ -179,7 +179,7 @@ export default function MapCard({ city, current, className }: MapCardProps) {
         const updateLayer = async () => {
             if (!map.isStyleLoaded()) {
                 await new Promise<void>((resolve) => {
-                    map.once("load", resolve);
+                    map.once("load", () => resolve());
                 });
             }
 
