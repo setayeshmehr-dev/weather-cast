@@ -119,7 +119,7 @@ export default function MapCard({ city, current, className }: MapCardProps) {
 
         const map = new Map({
             container,
-            style: `https://basemaps.cartocdn.com/gl/positron-gl-style/style.json?key=${cartoApiKey}`,
+            style: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
             center: centerRef.current,
             zoom: 5,
             dragRotate: false,
@@ -138,12 +138,13 @@ export default function MapCard({ city, current, className }: MapCardProps) {
             const element = document.createElement("div");
             element.className = "size-0";
 
-            markerRef.current = new Marker({
+            const marker = new Marker({
                 element,
                 anchor: "center",
-            })
-                .setLngLat(centerRef.current)
-                .addTo(map);
+            }).setLngLat(centerRef.current);
+
+            map.addMarker(marker);
+            markerRef.current = marker;
 
             setMarkerElement(element);
         });

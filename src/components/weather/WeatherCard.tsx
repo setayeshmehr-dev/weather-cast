@@ -62,7 +62,7 @@ export default function WeatherCard({
             data-weather-card=""
             aria-label={typeof title === "string" ? title : "Weather card"}
             aria-busy={showSkeleton}
-            className={`relative isolate flex min-h-0 min-w-0 flex-col p-(--card-pad) text-white [--card-pad:12px] @min-[624px]:[--card-pad:10px] ${className}`}
+            className={`relative isolate  flex min-h-0 min-w-0 flex-col p-(--card-pad) text-white [--card-pad:12px] @min-[624px]:[--card-pad:10px] ${className}`}
         >
             {/* The glass frame: a separate layer, so it can shrink without moving the grid. */}
             <div
