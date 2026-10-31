@@ -1,31 +1,10 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import CardSkeleton from "@/components/weather/CardSkeleton";
 import type { CardSkeletonVariant } from "@/components/weather/CardSkeleton";
 import { useWeatherLoading } from "@/components/weather/WeatherLoadingContext";
-
-/*
- * While the page scrolls, the scroll layout sets these variables on the card (see
- * WeatherScrollLayout): the header is pinned under the page header, the glass frame
- * shrinks from below, and the card fades once it is only a capsule.
- *
- * `willChange` is set so the browser promotes these layers to the GPU and avoids
- * repainting them every frame — this is what removes the jank.
- */
-const FRAME_STYLE: CSSProperties = {
-    top: "var(--card-shift, 0px)",
-    bottom: "var(--card-bottom, 0px)",
-    opacity: "var(--card-opacity, 1)",
-    willChange: "top, bottom, opacity",
-};
-
-const HEADER_STYLE: CSSProperties = {
-    transform: "translateY(var(--card-shift, 0px))",
-    opacity: "var(--card-opacity, 1)",
-    willChange: "transform, opacity",
-};
 
 type WeatherCardProps = {
     title: ReactNode;
@@ -41,6 +20,11 @@ type WeatherCardProps = {
     children?: ReactNode;
 };
 
+/*
+ * The glass frame, the header and the body are separate layers: while the page scrolls
+ * WeatherScrollLayout moves the header, shrinks the frame and clips the body (see there),
+ * without changing the size of the card in the grid.
+ */
 export default function WeatherCard({
     title,
     icon,
@@ -62,19 +46,17 @@ export default function WeatherCard({
             data-weather-card=""
             aria-label={typeof title === "string" ? title : "Weather card"}
             aria-busy={showSkeleton}
-            className={`relative isolate  flex min-h-0 min-w-0 flex-col p-(--card-pad) text-white [--card-pad:12px] @min-[624px]:[--card-pad:10px] ${className}`}
+            className={`relative isolate flex min-h-0 min-w-0 flex-col p-(--card-pad) text-white [--card-pad:12px] @min-[624px]:[--card-pad:10px] ${className}`}
         >
-            {/* The glass frame: a separate layer, so it can shrink without moving the grid. */}
             <div
+                data-card-frame=""
                 aria-hidden="true"
-                className="pointer-events-none absolute  inset-x-0 -z-10 rounded-[18px] border border-white/20 bg-black/10 backdrop-blur-md"
-                style={FRAME_STYLE}
+                className="pointer-events-none absolute inset-x-0 top-0 bottom-0 -z-10 rounded-[18px] border border-white/20 bg-black/10 backdrop-blur-lg"
             />
 
             <h2
                 data-card-header=""
-                style={HEADER_STYLE}
-                className={`pointer-events-auto relative z-10 flex shrink-0 items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-white/60 ${
+                className={`pointer-events-auto relative z-10 flex shrink-0 items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-white/60 will-change-transform ${
                     divided ? "border-b border-white/15 pb-2" : ""
                 }`}
             >
@@ -84,8 +66,7 @@ export default function WeatherCard({
 
             <div
                 data-card-body=""
-                className={`pointer-events-auto @container min-h-0 flex-1 overflow-hidden ${bodySpacing} ${bodyClassName}`}
-                style={{ willChange: "clip-path" }}
+                className={`pointer-events-auto @container min-h-0 flex-1 ${bodySpacing} ${bodyClassName}`}
             >
                 {showSkeleton && <CardSkeleton variant={skeleton} />}
 

@@ -6,8 +6,10 @@ import type { CSSProperties, ReactNode } from "react";
 import {
     HERO_FULL_HEIGHT,
     HERO_GAP,
+    HERO_STOP,
     getHeroProgress,
 } from "@/lib/heroScroll";
+import { createSmoothScroll } from "@/lib/smoothScroll";
 
 // Content sliding under a card header fades over this distance (px).
 const HEADER_FADE = 12;
@@ -26,173 +28,248 @@ const INITIAL_STYLE = {
     "--hero-compact": 0,
 } as CSSProperties;
 
-type CardMeasure = {
-    card: HTMLElement;
+type Parts = {
+    frame: HTMLElement;
+    header: HTMLElement;
     body: HTMLElement;
+    /** The element that receives clicks for the card (the detail trigger, if any). */
     trigger: HTMLElement;
-    /** Position of the card inside the scroll content (independent of scroll). */
-    naturalTop: number;
-    naturalBottom: number;
-    /** Bottom of the card header inside the card (offsetTop + height). */
-    headerEnd: number;
-    /** Top of the body inside the card (offsetTop). */
-    bodyTop: number;
-    /** Height of the capsule (header + padding top + padding bottom). */
-    capsuleHeight: number;
 };
 
-function resetCard(m: CardMeasure): void {
-    if (m.card.dataset.collapsed === undefined) return;
-    delete m.card.dataset.collapsed;
-    m.card.style.removeProperty("--card-shift");
-    m.card.style.removeProperty("--card-bottom");
-    m.card.style.removeProperty("--card-opacity");
-    m.card.style.visibility = "";
-    m.trigger.style.pointerEvents = "";
-    m.body.style.clipPath = "";
-    m.body.style.removeProperty("mask-image");
-    m.body.style.removeProperty("-webkit-mask-image");
+type Measure = {
+    card: HTMLElement;
+    parts: Parts;
+    /** How far the top of the card is above the stop line (0 = not yet there). */
+    shift: number;
+    /** Natural top and bottom of the card in the viewport. */
+    top: number;
+    bottom: number;
+    /** Bottom of the header and top of the body, inside the card. */
+    headerEnd: number;
+    bodyTop: number;
+    padding: number;
+};
+
+const partsCache = new WeakMap<HTMLElement, Parts | null>();
+
+function getParts(card: HTMLElement): Parts | null {
+    const cached = partsCache.get(card);
+
+    if (cached !== undefined) return cached;
+
+    const frame = card.querySelector<HTMLElement>("[data-card-frame]");
+    const header = card.querySelector<HTMLElement>("[data-card-header]");
+    const body = card.querySelector<HTMLElement>("[data-card-body]");
+
+    const parts =
+        frame && header && body
+            ? {
+                frame,
+                header,
+                body,
+                trigger: card.closest<HTMLElement>('[role="button"]') ?? card,
+            }
+            : null;
+
+    partsCache.set(card, parts);
+
+    return parts;
 }
 
-function applyCard(m: CardMeasure, top: number, bottom: number, stop: number): void {
-    const shift = Math.max(stop - top, 0);
+/*
+ * Reads only (no writes), so the layout is not recalculated between two cards. Cards
+ * that are still below the stop line and untouched are skipped quickly.
+ */
+function measureCards(scroller: HTMLElement, stop: number): Measure[] {
+    const measures: Measure[] = [];
+
+    scroller
+        .querySelectorAll<HTMLElement>("[data-weather-card]")
+        .forEach((card) => {
+            const parts = getParts(card);
+
+            if (!parts) return;
+
+            // Only the children of a card are moved, so its own box stays the
+            // natural one and tells where the card would be without the effect.
+            const rect = card.getBoundingClientRect();
+            const shift = Math.max(stop - rect.top, 0);
+
+            if (shift < 0.01 && card.dataset.collapsed === undefined) return;
+
+            measures.push({
+                card,
+                parts,
+                shift,
+                top: rect.top,
+                bottom: rect.bottom,
+                headerEnd: parts.header.offsetTop + parts.header.offsetHeight,
+                bodyTop: parts.body.offsetTop,
+                padding: parts.header.offsetTop,
+            });
+        });
+
+    return measures;
+}
+
+function resetCard({ card, parts }: Measure): void {
+    delete card.dataset.collapsed;
+
+    card.style.visibility = "";
+    parts.frame.style.top = "";
+    parts.frame.style.bottom = "";
+    parts.frame.style.opacity = "";
+    parts.header.style.transform = "";
+    parts.header.style.opacity = "";
+    parts.trigger.style.pointerEvents = "";
+    parts.body.style.clipPath = "";
+    parts.body.style.removeProperty("mask-image");
+    parts.body.style.removeProperty("-webkit-mask-image");
+}
+
+/*
+ * Like an elevator reaching the top floor: once the top of a card reaches the stop
+ * line, its ceiling (and header) stays there, while the floor keeps rising with the
+ * scroll. The content rises with the floor and disappears under the header. When
+ * only the header is left the card is a capsule: the floor stops, and further
+ * scrolling fades the capsule while the next card takes its place.
+ */
+function applyCard(measure: Measure): void {
+    const { card, parts, shift } = measure;
 
     if (shift < 0.01) {
-        resetCard(m);
+        resetCard(measure);
         return;
     }
 
-    const capsuleBottom = top + shift + m.capsuleHeight;
-    const floor = Math.max(bottom, capsuleBottom);
+    const capsuleHeight = measure.headerEnd + measure.padding;
+    const capsuleBottom = measure.top + shift + capsuleHeight;
+    const floor = Math.max(measure.bottom, capsuleBottom);
+
+    // 0 until the card is a capsule, then 1 over the height of the capsule: the
+    // next card (one gap below) reaches the stop line right when it is gone.
     const faded = Math.min(
-        Math.max((capsuleBottom - bottom) / m.capsuleHeight, 0),
+        Math.max((capsuleBottom - measure.bottom) / capsuleHeight, 0),
         1
     );
 
-    m.card.dataset.collapsed = "1";
-    m.card.style.setProperty("--card-shift", `${shift.toFixed(2)}px`);
-    m.card.style.setProperty("--card-bottom", `${(bottom - floor).toFixed(2)}px`);
-    m.card.style.setProperty("--card-opacity", (1 - faded).toFixed(3));
-    m.card.style.visibility = faded >= 1 ? "hidden" : "";
-    m.trigger.style.pointerEvents = "none";
+    const opacity = String(1 - faded);
 
-    const cut = Math.max(shift + m.headerEnd - m.bodyTop, 0);
-    const mask = `linear-gradient(to bottom, transparent ${cut.toFixed(2)}px, #000 ${(cut + HEADER_FADE).toFixed(2)}px)`;
-    m.body.style.clipPath = `inset(${cut.toFixed(2)}px 0 0 0)`;
-    m.body.style.setProperty("mask-image", mask);
-    m.body.style.setProperty("-webkit-mask-image", mask);
+    card.dataset.collapsed = "1";
+    card.style.visibility = faded >= 1 ? "hidden" : "";
+
+    parts.frame.style.top = `${shift}px`;
+    parts.frame.style.bottom = `${measure.bottom - floor}px`;
+    parts.frame.style.opacity = opacity;
+
+    parts.header.style.transform = `translate3d(0, ${shift}px, 0)`;
+    parts.header.style.opacity = opacity;
+
+    // The natural box of the card is partly hidden under the page header: clicks
+    // go only to its header and to the visible part of its body.
+    parts.trigger.style.pointerEvents = "none";
+
+    // Everything above the bottom of the pinned header is hidden; right under it
+    // the content fades.
+    const cut = shift + measure.headerEnd - measure.bodyTop;
+    const mask = `linear-gradient(to bottom, transparent ${cut}px, #000 ${cut + HEADER_FADE}px)`;
+
+    parts.body.style.clipPath = `inset(${Math.max(cut, 0)}px 0 0 0)`;
+    parts.body.style.setProperty("mask-image", mask);
+    parts.body.style.setProperty("-webkit-mask-image", mask);
 }
 
 /*
  * The page area: the header is fixed over the top, and the cards scroll below it.
- * Measurements are cached and only refreshed on mount, resize, or content change —
- * NOT on every scroll event. This removes layout thrashing and jank.
+ * The scroll position drives the header lines (CSS variables on the header only) and
+ * the state of every card. The scrolling is done by createSmoothScroll, so these
+ * effects are written in the same frame as the scroll position.
  */
 export default function WeatherScrollLayout({
     hero,
     children,
 }: WeatherScrollLayoutProps) {
     const rootRef = useRef<HTMLDivElement | null>(null);
+    const heroRef = useRef<HTMLDivElement | null>(null);
     const scrollerRef = useRef<HTMLElement | null>(null);
 
     useEffect(() => {
         const root = rootRef.current;
+        const heroElement = heroRef.current;
         const scroller = scrollerRef.current;
-        if (!root || !scroller) return;
 
-        // Cached state — only `update()` runs on scroll, and it never reads layout.
-        let measures: CardMeasure[] = [];
-        let rootTop = 0;
-        let frame = 0;
+        if (!root || !heroElement || !scroller) return;
 
-        const measureAll = () => {
-            // Reset every card first so getBoundingClientRect() returns the natural box.
-            for (const m of measures) resetCard(m);
-
-            rootTop = root.getBoundingClientRect().top;
-            const scrollTop = scroller.scrollTop;
-
-            const next: CardMeasure[] = [];
-            scroller
-                .querySelectorAll<HTMLElement>("[data-weather-card]")
-                .forEach((card) => {
-                    const header = card.querySelector<HTMLElement>("[data-card-header]");
-                    const body = card.querySelector<HTMLElement>("[data-card-body]");
-                    if (!header || !body) return;
-
-                    const rect = card.getBoundingClientRect();
-                    const padding = header.offsetTop;
-                    next.push({
-                        card,
-                        body,
-                        trigger: card.closest<HTMLElement>('[role="button"]') ?? card,
-                        // Convert viewport-relative position to content-relative position.
-                        naturalTop: rect.top - rootTop + scrollTop,
-                        naturalBottom: rect.bottom - rootTop + scrollTop,
-                        headerEnd: header.offsetTop + header.offsetHeight,
-                        bodyTop: body.offsetTop,
-                        capsuleHeight: header.offsetTop + header.offsetHeight + padding,
-                    });
-                });
-            measures = next;
-        };
+        let lastHero = "";
+        let queued = 0;
 
         const update = () => {
-            frame = 0;
+            const progress = getHeroProgress(scroller.scrollTop);
 
-            const scrollTop = scroller.scrollTop;
-            const progress = getHeroProgress(scrollTop);
+            // The header lines change only during the first part of the scroll.
+            const key = `${progress.highLow}|${progress.status}|${progress.temperature}|${progress.compact}`;
 
-            root.style.setProperty("--hero-high-low", progress.highLow.toFixed(3));
-            root.style.setProperty("--hero-status", progress.status.toFixed(3));
-            root.style.setProperty("--hero-temp", progress.temperature.toFixed(3));
-            root.style.setProperty("--hero-compact", progress.compact.toFixed(3));
+            if (key !== lastHero) {
+                lastHero = key;
 
-            // Cards stop at a fixed distance under the header.
-            const stop = progress.bottom + HERO_GAP;
-
-            for (const m of measures) {
-                const top = m.naturalTop - scrollTop;
-                const bottom = m.naturalBottom - scrollTop;
-                applyCard(m, top, bottom, stop);
+                heroElement.style.setProperty(
+                    "--hero-high-low",
+                    progress.highLow.toFixed(3)
+                );
+                heroElement.style.setProperty(
+                    "--hero-status",
+                    progress.status.toFixed(3)
+                );
+                heroElement.style.setProperty(
+                    "--hero-temp",
+                    progress.temperature.toFixed(3)
+                );
+                heroElement.style.setProperty(
+                    "--hero-compact",
+                    progress.compact.toFixed(3)
+                );
             }
+
+            // Cards stop at a fixed distance under the compact header.
+            const stop = root.getBoundingClientRect().top + HERO_STOP;
+
+            measureCards(scroller, stop).forEach(applyCard);
         };
 
         const schedule = () => {
-            if (frame === 0) frame = requestAnimationFrame(update);
+            if (queued !== 0) return;
+
+            queued = requestAnimationFrame(() => {
+                queued = 0;
+                update();
+            });
         };
 
-        const onResize = () => {
-            measureAll();
-            schedule();
-        };
-
-        // Initial measure + paint.
-        measureAll();
         update();
 
-        scroller.addEventListener("scroll", schedule, { passive: true });
+        const destroyScroll = createSmoothScroll(scroller, update);
 
-        // Re-measure only when the scroll area or its content actually changes size.
-        const observer = new ResizeObserver(onResize);
+        // The cards move when the window is resized or the content changes height.
+        const observer = new ResizeObserver(schedule);
+
         observer.observe(scroller);
+
         if (scroller.firstElementChild) observer.observe(scroller.firstElementChild);
 
-        window.addEventListener("resize", onResize, { passive: true });
-        window.addEventListener("orientationchange", onResize, { passive: true });
-
         return () => {
-            scroller.removeEventListener("scroll", schedule);
-            window.removeEventListener("resize", onResize);
-            window.removeEventListener("orientationchange", onResize);
+            destroyScroll();
             observer.disconnect();
-            cancelAnimationFrame(frame);
+            cancelAnimationFrame(queued);
         };
     }, []);
 
     return (
-        <div ref={rootRef} className="absolute inset-0 z-10" style={INITIAL_STYLE}>
-            <div className="pointer-events-none absolute inset-x-0 top-0 z-20">
+        <div ref={rootRef} className="absolute inset-0 z-10">
+            <div
+                ref={heroRef}
+                className="pointer-events-none absolute inset-x-0 top-0 z-20"
+                style={INITIAL_STYLE}
+            >
                 {hero}
             </div>
 

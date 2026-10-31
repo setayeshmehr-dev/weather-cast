@@ -74,8 +74,11 @@ type SunCurveProps = {
  * The curve is a cosine that crosses the horizon exactly at sunrise and sunset
  * and peaks at solar noon. It is an approximation of the sun's altitude, not
  * real astronomical data.
- * The SVG does not clip (overflow-visible): only the edge of the card does, so
- * the sun and its glow are never cut by the drawing itself.
+ *
+ * The SVG has overflow-hidden so nothing renders outside its viewBox — the
+ * clipPaths and the blur filter are generous (they extend past the viewBox on
+ * purpose so the blur is not cut), and the SVG's own overflow clipping is what
+ * keeps every pixel inside the card.
  */
 function SunCurve({ sunrise, sunset, now }: SunCurveProps) {
     const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
@@ -119,7 +122,7 @@ function SunCurve({ sunrise, sunset, now }: SunCurveProps) {
     return (
         <svg
             viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-            className="block w-full overflow-visible"
+            className="block w-full overflow-hidden"
             role="img"
             aria-label="Sun position during the day"
         >
@@ -278,12 +281,18 @@ export default function SunriseCard({
 
             {!loading && !error && ready && (
                 <>
-                    <p className={CARD_VALUE}>
+                    <p className={`${CARD_VALUE} relative z-20`}>
                         {formatTime(isNight ? sunrise.time : sunset.time)}
                     </p>
 
-                    {/* Above the text, bleeding to the sides and bottom of the card. */}
-                    <div className="pointer-events-none relative z-10 -mx-(--card-pad) -mb-(--card-pad)">
+                    {/*
+                    * The curve is absolutely positioned at the card's bottom edge,
+                    * spanning the full card width — no negative margins, no flex
+                    * quirks. overflow-hidden + rounded-b-[18px] clip the SVG to the
+                    * card's rounded bottom corners, so nothing can escape the card.
+                    * The section (relative isolate) is the positioning parent.
+                    */}
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 overflow-hidden rounded-b-[18px]">
                         <SunCurve
                             sunrise={minutesOfDay(sunrise.time)}
                             sunset={minutesOfDay(sunset.time)}

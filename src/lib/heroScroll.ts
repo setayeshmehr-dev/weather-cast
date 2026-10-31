@@ -10,6 +10,7 @@ export const HERO_TEMP_HEIGHT = 96;
 
 // Distance between the expanded header and the first card.
 export const HERO_GAP = 32;
+export const HERO_STOP = HERO_TOP + HERO_NAME_HEIGHT + HERO_GAP;
 
 
 
