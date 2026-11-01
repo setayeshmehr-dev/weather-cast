@@ -143,7 +143,7 @@ export default function MapCard({ city, current, className }: MapCardProps) {
                 anchor: "center",
             }).setLngLat(centerRef.current);
 
-            map.addMarker(marker);
+            marker.addTo(map);
             markerRef.current = marker;
 
             setMarkerElement(element);
