@@ -107,7 +107,7 @@ export default function MapCard({ city, current, className }: MapCardProps) {
 
     useEffect(() => {
         const container = mapContainerRef.current;
-        const maptilerApiKey = process.env.MAPTILER;
+        const maptilerApiKey = process.env.NEXT_PUBLIC_MAPTILER;
 
         if (!container || !maptilerApiKey) {
             console.error("MapCard: MapTiler API key is missing.");
