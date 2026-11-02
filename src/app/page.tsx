@@ -1,15 +1,16 @@
 "use client";
 
 import { Plus, SidebarSimple } from "@phosphor-icons/react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+
+import BootScreen from "@/components/BootScreen";
 import Sidebar from "@/components/sidebar/Sidebar";
 import WeatherDashboard from "@/components/weather/WeatherDashboard";
+import { useBootReady } from "@/hooks/useBootReady";
 import { useCities } from "@/hooks/useCities";
-import { preloadWeather } from "@/hooks/useWeather";
+import { useDisplayedCity } from "@/hooks/useDisplayedCity";
+import { useHydrated } from "@/hooks/useHydrated";
 import type { City } from "@/lib/cities";
-import { preloadWeatherVideo } from "@/lib/preloadVideo";
-import { getWeatherVideoName, getWeatherVideoUrls } from "@/lib/weatherVideo";
-
 
 const MOBILE_QUERY = "(max-width: 767px)";
 
@@ -17,17 +18,9 @@ const FLOATING_BUTTON_CLASS =
     "flex size-10 items-center justify-center rounded-full border border-white/20 bg-white/15 text-white backdrop-blur-md transition-colors hover:bg-white/25";
 
 export default function Home() {
-
-    const [hydrated, setHydrated] = useState(false);
-
-    useEffect(() => {
-        setHydrated(true);
-    }, []);
-
     const {
         cities,
         selectedCity,
-        reorderCities,
         isSelectedSaved,
         sidebarOpen,
         selectCity,
@@ -36,54 +29,25 @@ export default function Home() {
         setSidebarOpen,
     } = useCities();
 
-    const [query, setQuery] = useState("");
-    const [pendingCity, setPendingCity] = useState<City | null>(null);
-    const selectionRequest = useRef(0);
+    // The saved city is known only after hydration: nothing is fetched before that
+    // (otherwise the default city would be loaded first and then the real one).
+    const hydrated = useHydrated();
 
-    const closeSidebarOnMobile = () => {
+    // The page keeps the previous city until the selected one is ready.
+    const { city: displayedCity, pending } = useDisplayedCity(
+        selectedCity,
+        hydrated
+    );
+
+    const bootReady = useBootReady(displayedCity, hydrated);
+
+    const [query, setQuery] = useState("");
+
+    const handleSelectCity = (city: City) => {
+        selectCity(city);
+
         // On small screens the sidebar is an overlay: close it to show the city.
         if (window.matchMedia(MOBILE_QUERY).matches) setSidebarOpen(false);
-    };
-
-    /*
-     * The old city stays on screen until the new one is ready: its weather is
-     * loaded and the video of its weather is warmed up (both with a timeout, so
-     * this can never get stuck). A newer click cancels an older one.
-     */
-    const handleSelectCity = async (city: City) => {
-        const requestId = ++selectionRequest.current;
-
-        if (city.id === selectedCity.id) {
-            setPendingCity(null);
-            closeSidebarOnMobile();
-            return;
-        }
-
-        setPendingCity(city);
-
-        try {
-            const { current } = await preloadWeather(city);
-
-            if (requestId !== selectionRequest.current) return;
-
-            if (current) {
-                const name = getWeatherVideoName(
-                    current.weatherCode,
-                    current.isDay,
-                    current.cloudCover,
-                );
-
-                await preloadWeatherVideo(getWeatherVideoUrls(name).page);
-            }
-        } catch {
-            // The dashboard shows the error of this city.
-        }
-
-        if (requestId !== selectionRequest.current) return;
-
-        selectCity(city);
-        setPendingCity(null);
-        closeSidebarOnMobile();
     };
 
     const handleAddCity = () => {
@@ -93,10 +57,12 @@ export default function Home() {
 
     return (
         <div className="flex h-dvh overflow-hidden bg-linear-to-b from-sky-700 to-slate-900">
-            {pendingCity && (
+            <BootScreen done={bootReady} />
+
+            {pending && (
                 <div
                     role="progressbar"
-                    aria-label={`Loading ${pendingCity.name}`}
+                    aria-label={`Loading ${selectedCity.name}`}
                     className="fixed inset-x-0 top-0 z-50 h-0.5 animate-pulse bg-white/80"
                 />
             )}
@@ -127,15 +93,15 @@ export default function Home() {
                         selectedCity={selectedCity}
                         query={query}
                         onQueryChange={setQuery}
-                        onSelectCity={(city) => selectCity(city)}
-                        onRemoveCity={(id) => removeCity(id)}
-                        onReorderCities={reorderCities}   // ← NEW
-                        onClose={() => setSidebarOpen(false)}
-                    />
+                        onSelectCity={handleSelectCity}
+                        onRemoveCity={removeCity}
+                        onClose={() => setSidebarOpen(false)} onReorderCities={function (from: number, to: number): void {
+                            throw new Error("Function not implemented.");
+                        } }                    />
                 </div>
             </aside>
 
-                        <div className="relative min-w-0 flex-1 overflow-hidden">
+            <div className="relative min-w-0 flex-1 overflow-hidden">
                 <div className="absolute top-0 left-0 z-30 flex items-center gap-2 p-3">
                     {!sidebarOpen && (
                         <button
@@ -160,7 +126,7 @@ export default function Home() {
                     )}
                 </div>
 
-                {hydrated && <WeatherDashboard city={selectedCity} />}
+                {hydrated && <WeatherDashboard city={displayedCity} />}
             </div>
         </div>
     );

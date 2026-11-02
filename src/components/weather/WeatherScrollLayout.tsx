@@ -192,16 +192,40 @@ export default function WeatherScrollLayout({
     const rootRef = useRef<HTMLDivElement | null>(null);
     const heroRef = useRef<HTMLDivElement | null>(null);
     const scrollerRef = useRef<HTMLElement | null>(null);
+    const spacerRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
         const root = rootRef.current;
         const heroElement = heroRef.current;
         const scroller = scrollerRef.current;
+        const spacer = spacerRef.current;
 
-        if (!root || !heroElement || !scroller) return;
+        if (!root || !heroElement || !scroller || !spacer) return;
 
         let lastHero = "";
         let queued = 0;
+
+        /*
+         * The page can be only a little taller than the screen, so there may not be
+         * enough scrolling for the first card to go all the way through the elevator.
+         * The empty space at the end is made just tall enough for that, and is zero
+         * when the page is long enough.
+         */
+        const fitScrollRange = () => {
+            const first = scroller.querySelector<HTMLElement>(
+                "[data-weather-card]"
+            );
+
+            if (!first) return;
+
+            const needed =
+                HERO_FULL_HEIGHT + HERO_GAP - HERO_STOP + first.offsetHeight + 2;
+            const current = spacer.offsetHeight;
+            const range = scroller.scrollHeight - scroller.clientHeight - current;
+            const height = Math.max(Math.ceil(needed - range), 0);
+
+            if (height !== current) spacer.style.height = `${height}px`;
+        };
 
         const update = () => {
             const progress = getHeroProgress(scroller.scrollTop);
@@ -236,16 +260,21 @@ export default function WeatherScrollLayout({
             measureCards(scroller, stop).forEach(applyCard);
         };
 
+        const refresh = () => {
+            fitScrollRange();
+            update();
+        };
+
         const schedule = () => {
             if (queued !== 0) return;
 
             queued = requestAnimationFrame(() => {
                 queued = 0;
-                update();
+                refresh();
             });
         };
 
-        update();
+        refresh();
 
         const destroyScroll = createSmoothScroll(scroller, update);
 
@@ -279,6 +308,8 @@ export default function WeatherScrollLayout({
                 style={{ paddingTop: HERO_FULL_HEIGHT + HERO_GAP }}
             >
                 {children}
+
+                <div ref={spacerRef} aria-hidden="true" />
             </main>
         </div>
     );

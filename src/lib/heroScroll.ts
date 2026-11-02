@@ -3,14 +3,20 @@
  * the header is out of the layout, so nothing else depends on its real height, and
  * the cards fade at exactly the bottom of the header.
  */
-export const HERO_TOP = 20;
+export const HERO_TOP = 30;
 export const HERO_NAME_HEIGHT = 42;
 export const HERO_LINE_HEIGHT = 28;
 export const HERO_TEMP_HEIGHT = 96;
 
 // Distance between the expanded header and the first card.
 export const HERO_GAP = 32;
-export const HERO_STOP = HERO_TOP + HERO_NAME_HEIGHT + HERO_GAP;
+// Distance between the compact header and the cards stopped under it. A bit larger
+// than the first gap, because the compact header looks tighter.
+export const HERO_STOP_GAP = 30;
+
+/** The line where cards stop: under the compact header (name + one line) plus the gap. */
+export const HERO_STOP =
+    HERO_TOP + HERO_NAME_HEIGHT + HERO_LINE_HEIGHT + HERO_STOP_GAP;
 
 
 

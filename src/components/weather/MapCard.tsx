@@ -34,6 +34,9 @@ type MapCardProps = {
 
 type WeatherLayerType = "wind" | "temperature" | "precipitation";
 
+// The map always opens, and returns after a city change, at this zoom.
+const DEFAULT_ZOOM = 5;
+
 const WEATHER_LAYERS = [
     {
         id: "wind",
@@ -120,7 +123,7 @@ export default function MapCard({ city, current, className }: MapCardProps) {
             container,
             style: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
             center: centerRef.current,
-            zoom: 5,
+            zoom: DEFAULT_ZOOM,
             dragRotate: false,
             pitchWithRotate: false,
             doubleClickZoom: true,
@@ -166,7 +169,7 @@ export default function MapCard({ city, current, className }: MapCardProps) {
 
         centerRef.current = center;
         markerRef.current?.setLngLat(center);
-        mapRef.current?.flyTo({ center, essential: true });
+        mapRef.current?.flyTo({ center, zoom: DEFAULT_ZOOM, essential: true });
     }, [city.longitude, city.latitude]);
 
     useEffect(() => {
