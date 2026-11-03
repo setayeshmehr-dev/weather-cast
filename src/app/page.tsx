@@ -18,7 +18,7 @@ const FLOATING_BUTTON_CLASS =
     "flex size-10 items-center justify-center rounded-full border border-white/20 bg-white/15 text-white backdrop-blur-md transition-colors hover:bg-white/25";
 
 export default function Home() {
-    const {
+        const {
         cities,
         selectedCity,
         isSelectedSaved,
@@ -26,6 +26,7 @@ export default function Home() {
         selectCity,
         addCity,
         removeCity,
+        reorderCities,
         setSidebarOpen,
     } = useCities();
 
@@ -88,16 +89,16 @@ export default function Home() {
                 }`}
             >
                 <div className="h-full w-66 p-2">
-                    <Sidebar
+                                       <Sidebar
                         cities={cities}
                         selectedCity={selectedCity}
                         query={query}
                         onQueryChange={setQuery}
                         onSelectCity={handleSelectCity}
                         onRemoveCity={removeCity}
-                        onClose={() => setSidebarOpen(false)} onReorderCities={function (from: number, to: number): void {
-                            throw new Error("Function not implemented.");
-                        } }                    />
+                        onReorderCities={reorderCities}
+                        onClose={() => setSidebarOpen(false)}
+                    />
                 </div>
             </aside>
 
