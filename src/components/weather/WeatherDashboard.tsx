@@ -38,6 +38,7 @@ import MoonPopover from "@/components/weather/popover/MoonPopover";
 import SunrisePopover from "@/components/weather/popover/SunrisePopover";
 import HeroHeader from "@/components/weather/HeroHeader";
 import WeatherScrollLayout from "@/components/weather/WeatherScrollLayout";
+import TopRightControls from "@/components/menu/TopRightControls";
 
 
 const tenDayClassName =
@@ -98,7 +99,7 @@ export default function WeatherDashboard({ city }: WeatherDashboardProps) {
                     isDay={current?.isDay ?? true}
                     cloudCover={current?.cloudCover ?? null}
                 />
-
+                <TopRightControls city={city} />
                 <WeatherScrollLayout
                     hero={
                         <HeroHeader
