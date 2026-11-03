@@ -54,16 +54,11 @@ const DESCRIPTIONS = [
 
 type Deviation = "more" | "accurate" | "less";
 
-function toggled(set: Set<string>, id: string): Set<string> {
-    const next = new Set(set);
-
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-
-    return next;
+function toggled(list: string[], id: string): string[] {
+    return list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
 }
 
-function Symbol({ children }: { children: string }) {
+function ComparisonSign({ children }: { children: string }) {
     return (
         <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-white text-sm font-bold text-slate-900">
             {children}
@@ -79,20 +74,20 @@ type ReportIssueDialogProps = {
 export default function ReportIssueDialog({ city, onClose }: ReportIssueDialogProps) {
     const { units } = useUnits();
 
-    const [overall, setOverall] = useState<Set<string>>(new Set());
+    const [overall, setOverall] = useState<string[]>([]);
+    const [other, setOther] = useState<string[]>([]);
+    const [descriptions, setDescriptions] = useState<string[]>([]);
     const [temperature, setTemperature] = useState<Deviation>("accurate");
     const [wind, setWind] = useState<Deviation>("accurate");
-    const [other, setOther] = useState<Set<string>>(new Set());
-    const [descriptions, setDescriptions] = useState<Set<string>>(new Set());
     const [sent, setSent] = useState(false);
 
     // What the page shows now for this city.
     const current = peekWeather(city.id)?.current ?? null;
 
     const dirty =
-        overall.size > 0 ||
-        other.size > 0 ||
-        descriptions.size > 0 ||
+        overall.length > 0 ||
+        other.length > 0 ||
+        descriptions.length > 0 ||
         temperature !== "accurate" ||
         wind !== "accurate";
 
@@ -151,7 +146,7 @@ export default function ReportIssueDialog({ city, onClose }: ReportIssueDialogPr
                         key={item.id}
                         icon={<WeatherIcon slug={item.slug} label="" size={30} />}
                         label={item.label}
-                        checked={overall.has(item.id)}
+                        checked={overall.includes(item.id)}
                         onChange={() => setOverall((set) => toggled(set, item.id))}
                     />
                 ))}
@@ -200,19 +195,19 @@ export default function ReportIssueDialog({ city, onClose }: ReportIssueDialogPr
 
             <Group>
                 <ChoiceRow
-                    icon={<Symbol>{">"}</Symbol>}
+                    icon={<ComparisonSign>{">"}</ComparisonSign>}
                     label="It’s windier"
                     selected={wind === "more"}
                     onSelect={() => setWind("more")}
                 />
                 <ChoiceRow
-                    icon={<Symbol>{"="}</Symbol>}
+                    icon={<ComparisonSign>{"="}</ComparisonSign>}
                     label="Seems accurate"
                     selected={wind === "accurate"}
                     onSelect={() => setWind("accurate")}
                 />
                 <ChoiceRow
-                    icon={<Symbol>{"<"}</Symbol>}
+                    icon={<ComparisonSign>{"<"}</ComparisonSign>}
                     label="It’s less windy"
                     selected={wind === "less"}
                     onSelect={() => setWind("less")}
@@ -227,7 +222,7 @@ export default function ReportIssueDialog({ city, onClose }: ReportIssueDialogPr
                         key={item.id}
                         icon={<WeatherIcon slug={item.slug} label="" size={30} />}
                         label={item.label}
-                        selected={other.has(item.id)}
+                        selected={other.includes(item.id)}
                         onSelect={() => setOther((set) => toggled(set, item.id))}
                     />
                 ))}
@@ -237,7 +232,7 @@ export default function ReportIssueDialog({ city, onClose }: ReportIssueDialogPr
 
             <div className="grid grid-cols-2 gap-2">
                 {DESCRIPTIONS.map((label) => {
-                    const selected = descriptions.has(label);
+                    const selected = descriptions.includes(label);
 
                     return (
                         <button
