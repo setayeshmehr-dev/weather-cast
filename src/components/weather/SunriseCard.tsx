@@ -168,7 +168,7 @@ function SunCurve({ sunrise, sunset, now }: SunCurveProps) {
             <circle
                 cx={sun.x}
                 cy={sun.y}
-                r={24}
+                r={14}
                 fill={`url(#${glowId})`}
                 opacity={glowOpacity}
             />
