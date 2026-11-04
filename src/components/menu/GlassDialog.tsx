@@ -96,9 +96,13 @@ export default function GlassDialog({
                 aria-modal="true"
                 aria-labelledby={titleId}
                 tabIndex={-1}
-                className={`absolute flex flex-col overflow-hidden bg-slate-900/70 text-white outline-none backdrop-blur-3xl transition duration-200 max-md:inset-0 md:top-1/2 md:left-1/2 md:max-h-[min(86dvh,780px)] md:w-[min(92vw,460px)] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-4xl md:border md:border-white/15 md:shadow-2xl ${
-                    shown ? "opacity-100 md:scale-100" : "opacity-0 md:scale-95"
-                }`}
+                className={`absolute flex flex-col overflow-hidden text-white outline-none backdrop-blur-3xl transition duration-200 max-md:inset-0 md:top-1/2 md:left-1/2 md:max-h-[min(86dvh,780px)] md:w-[min(92vw,460px)] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-4xl md:border md:shadow-2xl md:border-white/10
+                        bg-[#0f0f14]/70
+                        supports-backdrop-filter:bg-[#0f0f14]/55
+                        supports-backdrop-filter:backdrop-blur-2xl
+                        supports-backdrop-filter:backdrop-saturate-[1.8]
+                        ${shown ? "opacity-100 md:scale-100" : "opacity-0 md:scale-95"}
+                    `}
             >
                 <header className="grid shrink-0 grid-cols-[2.75rem_1fr_2.75rem] items-center gap-2 px-4 pt-4 pb-3 max-md:pt-[max(1rem,env(safe-area-inset-top))]">
                     {showClose ? (

@@ -96,7 +96,12 @@ export default function TopRightControls({ city, children }: TopRightControlsPro
                     {menuOpen && (
                         <div
                             role="menu"
-                            className="absolute top-full right-0 z-40 mt-2 w-64 rounded-3xl border border-white/15 bg-slate-900/60 p-1.5 text-white shadow-2xl backdrop-blur-2xl"
+                            className={`absolute top-full right-0 z-40 mt-2 w-64 rounded-3xl border border-white/10 p-1.5 text-white shadow-2xl backdrop-blur-2xl
+                                bg-[#0f0f14]/70
+                                supports-backdrop-filter:bg-[#0f0f14]/55
+                                supports-backdrop-filter:backdrop-blur-2xl
+                                supports-backdrop-filter:backdrop-saturate-[1.8]
+                            `}
                         >
                             <MenuItem
                                 icon={<Ruler size={22} />}

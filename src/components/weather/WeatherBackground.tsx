@@ -101,7 +101,12 @@ export default function WeatherBackground({
                                 <option
                                     key={option.key}
                                     value={option.key}
-                                    className="bg-slate-900"
+                                    className={`
+                                        bg-[#0f0f14]/70
+                                        supports-backdrop-filter:bg-[#0f0f14]/55
+                                        supports-backdrop-filter:backdrop-blur-2xl
+                                        supports-backdrop-filter:backdrop-saturate-[1.8]
+                                    `}
                                 >
                                     {option.label}
                                 </option>
@@ -118,10 +123,20 @@ export default function WeatherBackground({
                             }
                             className="rounded-md bg-white/10 p-2 outline-none"
                         >
-                            <option value="day" className="bg-slate-900">
+                            <option value="day" className={`
+                                        bg-[#0f0f14]/70
+                                        supports-backdrop-filter:bg-[#0f0f14]/55
+                                        supports-backdrop-filter:backdrop-blur-2xl
+                                        supports-backdrop-filter:backdrop-saturate-[1.8]
+                                    `}>
                                 Day
                             </option>
-                            <option value="night" className="bg-slate-900">
+                            <option value="night" className={`
+                                        bg-[#0f0f14]/70
+                                        supports-backdrop-filter:bg-[#0f0f14]/55
+                                        supports-backdrop-filter:backdrop-blur-2xl
+                                        supports-backdrop-filter:backdrop-saturate-[1.8]
+                                    `}>
                                 Night
                             </option>
                         </select>
