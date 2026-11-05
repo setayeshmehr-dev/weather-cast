@@ -304,7 +304,7 @@ export default function WeatherScrollLayout({
 
             <main
                 ref={scrollerRef}
-                className="@container absolute inset-0 overflow-y-auto px-4 pb-6"
+                className="@container absolute inset-0 overflow-y-auto px-10 pb-6"
                 style={{ paddingTop: HERO_FULL_HEIGHT + HERO_GAP }}
             >
                 {children}

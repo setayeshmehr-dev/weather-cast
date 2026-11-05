@@ -28,12 +28,12 @@ export default function ScrollArrow({ side, visible, top, onClick }: ScrollArrow
                 onClick();
             }}
             className={`absolute z-20 flex h-16 w-10 -translate-y-1/2 cursor-pointer items-center justify-center text-white transition-opacity duration-200 ${
-                side === "left" ? "-left-7" : "-right-7"
+                side === "left" ? "-left-12" : "-right-12"
             } ${visible ? "opacity-100" : "pointer-events-none opacity-0"}`}
             style={{ top: top ?? "50%" }}
         >
             <Icon
-                size={28}
+                size={32}
                 weight="regular"
                 className="drop-shadow-[0_1px_3px_rgba(0,0,0,0.45)]"
             />
