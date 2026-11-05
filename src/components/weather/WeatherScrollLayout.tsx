@@ -9,6 +9,7 @@ import {
     HERO_STOP,
     getHeroProgress,
 } from "@/lib/heroScroll";
+import { pauseVideosWhileScrolling } from "@/lib/pauseVideos";
 import { TOUCH_SCROLL, createSmoothScroll } from "@/lib/smoothScroll";
 
 // Content sliding under a card header fades over this distance (px).
@@ -36,18 +37,21 @@ type Parts = {
     trigger: HTMLElement;
 };
 
-type Measure = {
+type CardState = {
     card: HTMLElement;
     parts: Parts;
-    /** How far the top of the card is above the stop line (0 = not yet there). */
-    shift: number;
-    /** Natural top and bottom of the card in the viewport. */
-    top: number;
-    bottom: number;
+    /** Natural top of the card, from the top of the scrolled content (px). */
+    contentTop: number;
+    height: number;
     /** Bottom of the header and top of the body, inside the card. */
     headerEnd: number;
     bodyTop: number;
     padding: number;
+    /** What is written on the card now, to skip identical writes. */
+    shift: number;
+    frameBottom: number;
+    opacity: number;
+    cut: number;
 };
 
 const partsCache = new WeakMap<HTMLElement, Parts | null>();
@@ -77,11 +81,14 @@ function getParts(card: HTMLElement): Parts | null {
 }
 
 /*
- * Reads only (no writes), so the layout is not recalculated between two cards. Cards
- * that are still below the stop line and untouched are skipped quickly.
+ * Measures the cards. This is done only when the size or the content changes, not on
+ * every frame: during the scroll the positions are just calculated from these numbers.
+ * Only the children of a card are moved, so its own box is always the natural one.
  */
-function measureCards(scroller: HTMLElement, stop: number): Measure[] {
-    const measures: Measure[] = [];
+function readCards(scroller: HTMLElement): CardState[] {
+    const scrollerTop = scroller.getBoundingClientRect().top;
+    const scrollTop = scroller.scrollTop;
+    const cards: CardState[] = [];
 
     scroller
         .querySelectorAll<HTMLElement>("[data-weather-card]")
@@ -90,29 +97,27 @@ function measureCards(scroller: HTMLElement, stop: number): Measure[] {
 
             if (!parts) return;
 
-            // Only the children of a card are moved, so its own box stays the
-            // natural one and tells where the card would be without the effect.
             const rect = card.getBoundingClientRect();
-            const shift = Math.max(stop - rect.top, 0);
 
-            if (shift < 0.01 && card.dataset.collapsed === undefined) return;
-
-            measures.push({
+            cards.push({
                 card,
                 parts,
-                shift,
-                top: rect.top,
-                bottom: rect.bottom,
+                contentTop: rect.top - scrollerTop + scrollTop,
+                height: rect.height,
                 headerEnd: parts.header.offsetTop + parts.header.offsetHeight,
                 bodyTop: parts.body.offsetTop,
                 padding: parts.header.offsetTop,
+                shift: 0,
+                frameBottom: 0,
+                opacity: 1,
+                cut: 0,
             });
         });
 
-    return measures;
+    return cards;
 }
 
-function resetCard({ card, parts }: Measure): void {
+function resetCard({ card, parts }: CardState): void {
     delete card.dataset.collapsed;
 
     card.style.visibility = "";
@@ -134,44 +139,70 @@ function resetCard({ card, parts }: Measure): void {
  * only the header is left the card is a capsule: the floor stops, and further
  * scrolling fades the capsule while the next card takes its place.
  */
-function applyCard(measure: Measure): void {
-    const { card, parts, shift } = measure;
+function applyCard(state: CardState, scrollTop: number): void {
+    const { card, parts } = state;
+
+    const top = state.contentTop - scrollTop;
+    const shift = Math.max(HERO_STOP - top, 0);
 
     if (shift < 0.01) {
-        resetCard(measure);
+        if (card.dataset.collapsed !== undefined) resetCard(state);
+
         return;
     }
 
-    const capsuleHeight = measure.headerEnd + measure.padding;
-    const capsuleBottom = measure.top + shift + capsuleHeight;
-    const floor = Math.max(measure.bottom, capsuleBottom);
+    const capsuleHeight = state.headerEnd + state.padding;
+    const bottom = top + state.height;
+    const capsuleBottom = top + shift + capsuleHeight;
+    const floor = Math.max(bottom, capsuleBottom);
 
     // 0 until the card is a capsule, then 1 over the height of the capsule: the
     // next card (one gap below) reaches the stop line right when it is gone.
     const faded = Math.min(
-        Math.max((capsuleBottom - measure.bottom) / capsuleHeight, 0),
+        Math.max((capsuleBottom - bottom) / capsuleHeight, 0),
         1
     );
 
-    const opacity = String(1 - faded);
+    const opacity = 1 - faded;
+    const frameBottom = bottom - floor;
+    const cut = shift + state.headerEnd - state.bodyTop;
 
-    card.dataset.collapsed = "1";
-    card.style.visibility = faded >= 1 ? "hidden" : "";
+    if (card.dataset.collapsed === undefined) {
+        card.dataset.collapsed = "1";
+
+        // The natural box of the card is partly hidden under the page header: clicks
+        // go only to its header and to the visible part of its body.
+        parts.trigger.style.pointerEvents = "none";
+    }
+
+    const hidden = faded >= 1;
+
+    if (hidden !== (card.style.visibility === "hidden")) {
+        card.style.visibility = hidden ? "hidden" : "";
+    }
+
+    const changed =
+        Math.abs(shift - state.shift) > 0.1 ||
+        Math.abs(frameBottom - state.frameBottom) > 0.1 ||
+        Math.abs(opacity - state.opacity) > 0.004 ||
+        Math.abs(cut - state.cut) > 0.1;
+
+    if (!changed) return;
+
+    state.shift = shift;
+    state.frameBottom = frameBottom;
+    state.opacity = opacity;
+    state.cut = cut;
 
     parts.frame.style.top = `${shift}px`;
-    parts.frame.style.bottom = `${measure.bottom - floor}px`;
-    parts.frame.style.opacity = opacity;
+    parts.frame.style.bottom = `${frameBottom}px`;
+    parts.frame.style.opacity = String(opacity);
 
     parts.header.style.transform = `translate3d(0, ${shift}px, 0)`;
-    parts.header.style.opacity = opacity;
-
-    // The natural box of the card is partly hidden under the page header: clicks
-    // go only to its header and to the visible part of its body.
-    parts.trigger.style.pointerEvents = "none";
+    parts.header.style.opacity = String(opacity);
 
     // Everything above the bottom of the pinned header is hidden; right under it
     // the content fades.
-    const cut = shift + measure.headerEnd - measure.bodyTop;
     const mask = `linear-gradient(to bottom, transparent ${cut}px, #000 ${cut + HEADER_FADE}px)`;
 
     parts.body.style.clipPath = `inset(${Math.max(cut, 0)}px 0 0 0)`;
@@ -195,14 +226,17 @@ export default function WeatherScrollLayout({
     const spacerRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
-        const root = rootRef.current;
         const heroElement = heroRef.current;
         const scroller = scrollerRef.current;
         const spacer = spacerRef.current;
 
-        if (!root || !heroElement || !scroller || !spacer) return;
+        if (!heroElement || !scroller || !spacer) return;
 
+        const touchScreen = window.matchMedia("(hover: none)").matches;
+
+        let cards: CardState[] = [];
         let lastHero = "";
+        let lastScrollTop = -1;
         let queued = 0;
 
         /*
@@ -228,7 +262,8 @@ export default function WeatherScrollLayout({
         };
 
         const update = () => {
-            const progress = getHeroProgress(scroller.scrollTop);
+            const scrollTop = scroller.scrollTop;
+            const progress = getHeroProgress(scrollTop);
 
             // The header lines change only during the first part of the scroll.
             const key = `${progress.highLow}|${progress.status}|${progress.temperature}|${progress.compact}`;
@@ -254,14 +289,19 @@ export default function WeatherScrollLayout({
                 );
             }
 
-            // Cards stop at a fixed distance under the compact header.
-            const stop = root.getBoundingClientRect().top + HERO_STOP;
+            for (const state of cards) applyCard(state, scrollTop);
 
-            measureCards(scroller, stop).forEach(applyCard);
+            // Phones: the video behind the cards rests while the page moves.
+            if (touchScreen && lastScrollTop !== -1 && scrollTop !== lastScrollTop) {
+                pauseVideosWhileScrolling();
+            }
+
+            lastScrollTop = scrollTop;
         };
 
         const refresh = () => {
             fitScrollRange();
+            cards = readCards(scroller);
             update();
         };
 
@@ -302,9 +342,9 @@ export default function WeatherScrollLayout({
                 {hero}
             </div>
 
-                        <main
+            <main
                 ref={scrollerRef}
-                className={`@container absolute inset-0 overflow-y-auto overscroll-contain px-10 pb-[max(1.5rem,env(safe-area-inset-bottom))] ${
+                className={`@container absolute inset-0 overflow-y-auto overscroll-contain px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] ${
                     TOUCH_SCROLL ? "touch-pan-x touch-pinch-zoom" : ""
                 }`}
                 style={{ paddingTop: HERO_FULL_HEIGHT + HERO_GAP }}

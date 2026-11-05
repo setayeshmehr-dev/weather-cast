@@ -13,7 +13,7 @@ const NOTCH = 50;
 const LINE_HEIGHT = 40;
 
 // Touch: movement (px) before the direction of a gesture is decided.
-const TOUCH_SLOP = 6;
+const TOUCH_SLOP = 4;
 
 // Momentum after a swipe: the share of the speed kept per millisecond (as on iOS).
 const FLING_DECAY = 0.998;
@@ -27,6 +27,26 @@ const STALE_MS = 70;
 // A click right after a drag is not a tap: it is blocked for this long.
 const CLICK_BLOCK_MS = 150;
 
+/** Is the touch on a list that scrolls sideways (such as the hourly forecast)? */
+function insideHorizontalScroller(
+    target: EventTarget | null,
+    boundary: HTMLElement
+): boolean {
+    let element = target instanceof Element ? target : null;
+
+    while (element && element !== boundary) {
+        if (element.scrollWidth > element.clientWidth + 1) {
+            const overflowX = getComputedStyle(element).overflowX;
+
+            if (overflowX === "auto" || overflowX === "scroll") return true;
+        }
+
+        element = element.parentElement;
+    }
+
+    return false;
+}
+
 type Mode = "idle" | "lerp" | "drag" | "fling";
 
 type Sample = { time: number; position: number };
@@ -36,6 +56,7 @@ type TouchGesture = {
     startX: number;
     startY: number;
     startPosition: number;
+    allowHorizontal: boolean;
     axis: "pending" | "vertical";
     samples: Sample[];
 };
@@ -236,6 +257,7 @@ export function createSmoothScroll(
             startY: event.clientY,
             startPosition: current,
             axis: "pending",
+            allowHorizontal: insideHorizontalScroller(event.target, scroller),
             samples: [],
         };
     };
@@ -249,8 +271,7 @@ export function createSmoothScroll(
         if (gesture.axis === "pending") {
             if (Math.hypot(dx, dy) < TOUCH_SLOP) return;
 
-            // A sideways gesture belongs to the browser (the lists that scroll sideways).
-            if (Math.abs(dx) > Math.abs(dy)) {
+            if (gesture.allowHorizontal && Math.abs(dx) > Math.abs(dy) * 1.2) {
                 gesture = null;
                 return;
             }

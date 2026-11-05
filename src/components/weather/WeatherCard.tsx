@@ -60,12 +60,12 @@ export default function WeatherCard({
             <div
                 data-card-frame=""
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-x-0 top-0 bottom-0 -z-10 rounded-[18px] border border-white/20 bg-black/10 backdrop-blur-lg"
+                className="pointer-events-none absolute inset-x-0 top-0 bottom-0 -z-10 rounded-[18px] border border-white/20 bg-black/10 backdrop-blur-lg [@media(hover:none)]:bg-slate-900/40 [@media(hover:none)]:backdrop-blur-none"
             />
 
             <h2
                 data-card-header=""
-                className={`pointer-events-auto relative z-10 flex shrink-0 items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-white/60 will-change-transform ${
+                className={`pointer-events-auto relative z-10 flex shrink-0 items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-white/60 ${
                     divided ? "border-b border-white/15 pb-2" : ""
                 }`}
             >

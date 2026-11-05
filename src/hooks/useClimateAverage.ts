@@ -7,6 +7,7 @@ import { fetchJson } from "@/lib/fetchJson";
 
 type ArchiveResponse = {
     daily: {
+        time: string[];
         temperature_2m_max: (number | null)[];
     };
 };
@@ -28,9 +29,11 @@ function toIsoDate(time: number): string {
 function readCache(key: string): number | null {
     try {
         const raw = localStorage.getItem(key);
+
         if (raw === null) return null;
 
         const value = Number(raw);
+
         return Number.isFinite(value) ? value : null;
     } catch {
         return null;
@@ -45,33 +48,10 @@ function writeCache(key: string, value: number): void {
     }
 }
 
-async function fetchHighs(
-    latitude: number,
-    longitude: number,
-    start: string,
-    end: string,
-    signal: AbortSignal
-): Promise<number[]> {
-    const api =
-        "https://archive-api.open-meteo.com/v1/archive" +
-        `?latitude=${latitude}&longitude=${longitude}` +
-        `&start_date=${start}&end_date=${end}` +
-        "&daily=temperature_2m_max&timezone=auto";
-
-    const data = await fetchJson<ArchiveResponse>(api, {
-        signal,
-        timeoutMs: 15_000,
-        retries: 1,
-    });
-
-    return data.daily.temperature_2m_max.filter(
-        (value): value is number => value !== null
-    );
-}
-
-/**
+/*
  * Average daily high for the given date (YYYY-MM-DD) in the given city: the mean
  * over the last 10 years, using a window of ±3 days around the same calendar day.
+ * One request for all the years (not one per year), then the windows are picked here.
  */
 export function useClimateAverage(date: string | null, city: City) {
     const { id, latitude, longitude } = city;
@@ -96,23 +76,42 @@ export function useClimateAverage(date: string | null, city: City) {
 
                 const [year, month, dayOfMonth] = day.split("-").map(Number);
 
-                const requests = Array.from({ length: YEARS }, (_, index) => {
-                    const center = Date.UTC(year - 1 - index, month - 1, dayOfMonth);
+                const api =
+                    "https://archive-api.open-meteo.com/v1/archive" +
+                    `?latitude=${latitude}&longitude=${longitude}` +
+                    `&start_date=${year - YEARS}-01-01&end_date=${year - 1}-12-31` +
+                    "&daily=temperature_2m_max&timezone=auto";
 
-                    return fetchHighs(
-                        latitude,
-                        longitude,
-                        toIsoDate(center - WINDOW_DAYS * DAY_MS),
-                        toIsoDate(center + WINDOW_DAYS * DAY_MS),
-                        controller.signal
-                    );
+                const data = await fetchJson<ArchiveResponse>(api, {
+                    signal: controller.signal,
+                    timeoutMs: 20_000,
+                    retries: 1,
                 });
 
-                const highs = (await Promise.all(requests)).flat();
+                const highs = new Map<string, number>();
 
-                if (highs.length === 0) throw new Error("No climate data.");
+                data.daily.time.forEach((time, index) => {
+                    const value = data.daily.temperature_2m_max[index];
 
-                const mean = highs.reduce((sum, value) => sum + value, 0) / highs.length;
+                    if (value !== null && value !== undefined) highs.set(time, value);
+                });
+
+                const values: number[] = [];
+
+                for (let back = 1; back <= YEARS; back++) {
+                    const center = Date.UTC(year - back, month - 1, dayOfMonth);
+
+                    for (let offset = -WINDOW_DAYS; offset <= WINDOW_DAYS; offset++) {
+                        const value = highs.get(toIsoDate(center + offset * DAY_MS));
+
+                        if (value !== undefined) values.push(value);
+                    }
+                }
+
+                if (values.length === 0) throw new Error("No climate data.");
+
+                const mean =
+                    values.reduce((sum, value) => sum + value, 0) / values.length;
 
                 writeCache(cacheKey, mean);
                 setState({ key: stateKey, average: mean, error: null });
