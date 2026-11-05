@@ -275,7 +275,7 @@ function processWeather(data: OpenMeteoResponse): ProcessedWeather {
         relativeHumidity: data.hourly.relative_humidity_2m[currentHourIndex],
         dewPoint: data.hourly.dew_point_2m[currentHourIndex],
         visibility: data.hourly.visibility[currentHourIndex],
-        uvIndex: data.current.uv_index ?? null,
+        uvIndex: data.current.uv_index ?? data.hourly.uv_index[currentHourIndex] ?? null,
         cloudCover: data.current.cloud_cover ?? null,
     };
 

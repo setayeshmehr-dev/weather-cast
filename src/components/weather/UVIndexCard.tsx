@@ -77,7 +77,11 @@ export default function UVIndexCard({
                     {error}
                 </p>
             )}
-
+            {!loading && !error && uvIndex === null && (
+                <p className="text-sm text-white/70">
+                    UV data is not available right now.
+                </p>
+            )}
             {!loading && !error && uvIndex !== null && level && (
                 <>
                     <div>

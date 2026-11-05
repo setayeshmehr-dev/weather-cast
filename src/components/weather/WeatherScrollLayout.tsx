@@ -291,12 +291,6 @@ export default function WeatherScrollLayout({
 
             for (const state of cards) applyCard(state, scrollTop);
 
-            // Phones: the video behind the cards rests while the page moves.
-            if (touchScreen && lastScrollTop !== -1 && scrollTop !== lastScrollTop) {
-                pauseVideosWhileScrolling();
-            }
-
-            lastScrollTop = scrollTop;
         };
 
         const refresh = () => {
@@ -345,7 +339,7 @@ export default function WeatherScrollLayout({
             <main
                 ref={scrollerRef}
                 className={`@container absolute inset-0 overflow-y-auto overscroll-contain px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] ${
-                    TOUCH_SCROLL ? "touch-pan-x touch-pinch-zoom" : ""
+                    TOUCH_SCROLL ? "touch-pinch-zoom" : ""
                 }`}
                 style={{ paddingTop: HERO_FULL_HEIGHT + HERO_GAP }}
             >

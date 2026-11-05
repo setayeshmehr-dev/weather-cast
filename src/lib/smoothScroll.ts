@@ -90,7 +90,6 @@ export function createSmoothScroll(
     let last = 0;
 
     let gesture: TouchGesture | null = null;
-    let touchCount = 0;
     let clickBlockedUntil = 0;
 
     const maxScroll = () =>
@@ -241,10 +240,9 @@ export function createSmoothScroll(
     const onPointerDown = (event: PointerEvent) => {
         if (event.pointerType !== "touch") return;
 
-        touchCount += 1;
 
         // A second finger is a pinch or a two-finger gesture (the map): not ours.
-        if (touchCount > 1) {
+        if (!event.isPrimary) {
             endGesture(null, false);
             return;
         }
@@ -303,8 +301,6 @@ export function createSmoothScroll(
 
     const onPointerUp = (event: PointerEvent) => {
         if (event.pointerType !== "touch") return;
-
-        touchCount = Math.max(touchCount - 1, 0);
 
         if (gesture && event.pointerId === gesture.id) {
             endGesture(event, event.type === "pointerup");

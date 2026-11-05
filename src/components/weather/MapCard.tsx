@@ -285,24 +285,26 @@ export default function MapCard({ city, current, className }: MapCardProps) {
                             onClick={() => setMenuOpen((open) => !open)}
                             aria-label="Select weather map layer"
                             aria-expanded={menuOpen}
-                            className="group relative flex items-center gap-2 overflow-hidden rounded-full border border-white/60 bg-white/40 px-3.5 py-1.5 text-xs font-semibold text-gray-700 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7),0_4px_16px_rgba(31,38,135,0.12)] backdrop-blur-xl transition-all duration-300 hover:bg-white/60 hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.9),0_6px_24px_rgba(31,38,135,0.18)] active:scale-95 dark:border-white/10 dark:bg-white/10 dark:text-gray-100 dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.15),0_4px_16px_rgba(0,0,0,0.45)] dark:hover:bg-white/20"
+                            className="group relative flex items-center gap-2 overflow-hidden rounded-full px-4 py-2 text-xs font-semibold text-gray-700 backdrop-blur-md backdrop-saturate-150 backdrop-brightness-105 transition-transform duration-200 hover:scale-[1.03] active:scale-95 dark:text-gray-100"
                         >
-                            {/* reflection on the top edge */}
-                            <span className="pointer-events-none absolute inset-x-3 top-0 h-px bg-linear-to-r from-transparent via-white/90 to-transparent dark:via-white/40" />
+                            {/* frosted tint */}
+                            <span className="absolute inset-0 rounded-full bg-white/10 transition-colors duration-200 group-hover:bg-white/20 dark:bg-white/6 dark:group-hover:bg-white/12" />
+                            {/* diagonal sheen */}
+                            <span className="absolute inset-0 rounded-full bg-linear-to-br from-white/40 via-transparent to-white/20" />
+                            {/* gradient rim */}
+                            <span className="absolute inset-0 rounded-full p-px [background:linear-gradient(150deg,rgba(255,255,255,0.7),rgba(255,255,255,0.12)_45%,rgba(255,255,255,0.1)_60%,rgba(255,255,255,0.45))] [-webkit-mask:linear-gradient(#000_0_0)_content-box,linear-gradient(#000_0_0)] [-webkit-mask-composite:xor] [mask:linear-gradient(#000_0_0)_content-box_exclude,linear-gradient(#000_0_0)]" />
+                            {/* inner depth */}
+                            <span className="absolute inset-0 rounded-full shadow-[inset_0_1px_0_rgba(255,255,255,0.7),inset_0_-1px_0_rgba(255,255,255,0.3),0_4px_16px_rgba(17,17,26,0.08)]" />
 
-                            <Stack
-                                size={16}
-                                weight="regular"
-                                className="text-gray-500 transition-transform duration-300 group-hover:scale-110 dark:text-sky-300"
-                            />
-                            <span>Layers</span>
+                            <Stack size={16} weight="regular" className="relative text-gray-500" />
+                            <span className="relative">Layers</span>
                             <CaretDown
                                 size={13}
-                                className={`transition-transform duration-300 ${
+                                className={`relative transition-transform duration-300 ${
                                     menuOpen ? "rotate-180" : ""
                                 }`}
                             />
-                        </button>
+</button>
 
                         {menuOpen && (
                             <div
