@@ -2,7 +2,7 @@
 
 import { Gauge } from "@phosphor-icons/react";
 import { useState } from "react";
-
+import { useFormat } from "@/hooks/useFormat";
 import DayChart from "@/components/weather/popover/DayChart";
 import DayPicker from "@/components/weather/popover/DayPicker";
 import DetailPopover from "@/components/weather/popover/DetailPopover";
@@ -12,10 +12,10 @@ import { hourFraction, hoursOfDay, sentenceLabel, weekdayLong } from "@/lib/dayL
 import { niceTicks } from "@/lib/chart";
 
 const PURPLE = "#c640f0";
-
 function trendSymbol(values: (number | null)[], hour: number): string {
     const now = values[hour];
     const before = values[Math.max(hour - 3, 0)];
+    
 
     if (now === null || now === undefined || before === null || before === undefined) {
         return "=";
@@ -43,6 +43,7 @@ export default function PressurePopover({
     current,
     initialDate,
 }: PressurePopoverProps) {
+    const fmt = useFormat();
     const todayDate = details.days[details.todayIndex].date;
     const [date, setDate] = useState(initialDate);
 
@@ -67,10 +68,14 @@ export default function PressurePopover({
     const caption = trend.charAt(0).toUpperCase() + trend.slice(1);
     const shown = isToday ? current.pressure : average;
 
-    const summary = isToday
-        ? `Pressure is currently ${Math.round(current.pressure)} hPa and ${trend}. Today, the average pressure will be ${Math.round(average)} hPa, and the lowest pressure will be ${Math.round(lowest)} hPa.`
-        : `${weekdayLong(day.date)}, the pressure will be ${trend}. The average pressure will be ${Math.round(average)} hPa, and the lowest pressure will be ${Math.round(lowest)} hPa.`;
+    const unit = fmt.pressureUnit;
 
+    const summary = isToday
+        ? `Pressure is currently ${fmt.pressure(current.pressure)} ${unit} and ${trend}. Today, the average pressure will be ${fmt.pressure(average)} ${unit}, and the lowest pressure will be ${fmt.pressure(lowest)} ${unit}.`
+        : `${weekdayLong(day.date)}, the pressure will be ${trend}. The average pressure will be ${fmt.pressure(average)} ${unit}, and the lowest pressure will be ${fmt.pressure(lowest)} ${unit}.`;
+
+
+    
     return (
         <DetailPopover
             anchor={anchor}
@@ -86,16 +91,16 @@ export default function PressurePopover({
             />
 
             <PopoverHeadline
-                value={String(Math.round(shown))}
-                unit="hPa"
+                value={fmt.pressure(shown)}
+                unit={fmt.pressureUnit}
                 caption={caption}
             />
 
             <div className="px-4 pb-4">
                 <DayChart
                     values={values}
-                    ticks={niceTicks(lowest - 1, highest + 1, 6)}
-                    formatTick={(tick) => String(Math.round(tick))}
+                    ticks={fmt.pressureTicks(lowest - 1, highest + 1, 6)}
+                    formatTick={fmt.pressureTick}
                     colorAt={() => PURPLE}
                     height={200}
                     nowHour={isToday ? hourFraction(current.time) : null}

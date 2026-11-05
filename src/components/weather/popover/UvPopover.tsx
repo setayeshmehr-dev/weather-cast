@@ -2,7 +2,6 @@
 
 import { Sun } from "@phosphor-icons/react";
 import { useState } from "react";
-
 import DayChart from "@/components/weather/popover/DayChart";
 import DayPicker from "@/components/weather/popover/DayPicker";
 import DetailPopover from "@/components/weather/popover/DetailPopover";

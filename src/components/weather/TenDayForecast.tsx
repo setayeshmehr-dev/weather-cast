@@ -3,6 +3,7 @@ import WeatherIcon from "@/components/weather/WeatherIcon";
 import type { CurrentWeather, DailyItem } from "@/hooks/useWeather";
 import { getWeatherIcon } from "@/hooks/useWeather";
 import { temperatureColor } from "@/lib/temperatureColor";
+import { useFormat } from "@/hooks/useFormat";
 
 // Rain chance (%) from which the blue percentage label is shown.
 const MIN_CHANCE_TO_SHOW = 20;
@@ -10,14 +11,14 @@ function rangeGradient(min: number, max: number): string {
     const steps = 4;
     const colors = Array.from({ length: steps + 1 }, (_, i) =>
         temperatureColor(min + ((max - min) * i) / steps)
-    );
+);
 
-    return `linear-gradient(to right, ${colors.join(", ")})`;
+return `linear-gradient(to right, ${colors.join(", ")})`;
 }
 
 function formatDay(date: string, index: number): string {
     if (index === 0) return "Today";
-
+    
     return new Date(`${date}T12:00:00`).toLocaleDateString("en-US", {
         weekday: "short",
     });
@@ -38,6 +39,7 @@ export default function TenDayForecast({
     error,
     className,
 }: TenDayForecastProps) {
+    const fmt = useFormat();
     const weekMin = Math.min(...daily.map((day) => day.min));
     const weekMax = Math.max(...daily.map((day) => day.max));
     const span = weekMax - weekMin || 1;
@@ -113,7 +115,7 @@ export default function TenDayForecast({
                                 </div>
 
                                 <span className="text-right font-medium text-white/40">
-                                    {Math.round(day.min)}°
+                                    {fmt.temperature(day.min)}°
                                 </span>
 
                                 <div className="relative h-1 rounded-full bg-black/25">
@@ -135,7 +137,7 @@ export default function TenDayForecast({
                                 </div>
 
                                 <span className="text-right font-semibold">
-                                    {Math.round(day.max)}°
+                                    {fmt.temperature(day.max)}°
                                 </span>
                             </li>
                         );

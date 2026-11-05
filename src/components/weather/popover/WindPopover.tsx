@@ -1,5 +1,6 @@
 "use client";
 
+import { useFormat } from "@/hooks/useFormat";
 import { Wind } from "@phosphor-icons/react";
 import { useState } from "react";
 
@@ -83,6 +84,7 @@ export default function WindPopover({
     current,
     initialDate,
 }: WindPopoverProps) {
+    const fmt = useFormat();
     const todayDate = details.days[details.todayIndex].date;
     const [date, setDate] = useState(initialDate);
 
@@ -105,13 +107,15 @@ export default function WindPopover({
         ? current.windDirection
         : meanDirection(hours.map((hour) => hour.windDirection));
 
-    const lowSpeed = Math.round(Math.min(...speeds));
-    const highSpeed = Math.round(Math.max(...speeds));
+    const lowSpeed = fmt.wind(Math.min(...speeds));
+    const highSpeed = fmt.wind(Math.max(...speeds));
     const directionText = windDirectionWords(direction);
 
+        const unit = fmt.windUnit;
+
     const summary = isToday
-        ? `Wind is currently ${Math.round(current.windSpeed)} km/h from the ${directionText}. Today, wind speeds are ${lowSpeed} to ${highSpeed} km/h, with gusts up to ${Math.round(peakGust)} km/h.`
-        : `${weekdayLong(day.date)}, wind speeds will be ${lowSpeed} to ${highSpeed} km/h, mostly from the ${directionText}, with gusts up to ${Math.round(peakGust)} km/h.`;
+        ? `Wind is currently ${fmt.wind(current.windSpeed)} ${unit} from the ${directionText}. Today, wind speeds are ${lowSpeed} to ${highSpeed} ${unit}, with gusts up to ${fmt.wind(peakGust)} ${unit}.`
+        : `${weekdayLong(day.date)}, wind speeds will be ${lowSpeed} to ${highSpeed} ${unit}, mostly from the ${directionText}, with gusts up to ${fmt.wind(peakGust)} ${unit}.`;
 
     const scaleMax = Math.max(peakGust, previousPeakGust, 1);
     const activeForce = beaufortForce(speed);
@@ -131,9 +135,9 @@ export default function WindPopover({
             />
 
             <PopoverHeadline
-                value={String(Math.round(speed))}
-                unit="km/h"
-                caption={`Gusts: ${Math.round(isToday ? current.windGusts : peakGust)} km/h`}
+                value={fmt.wind(speed)}
+                unit={fmt.windUnit}
+                caption={`Gusts: ${fmt.wind(isToday ? current.windGusts : peakGust)} ${fmt.windUnit}`}
                 extra={
                     <span className="text-2xl font-medium text-white/60">
                         {windDirectionName(direction)}
@@ -144,8 +148,8 @@ export default function WindPopover({
             <div className="px-4 pb-4">
                 <DayChart
                     values={speeds}
-                    ticks={niceTicks(0, Math.max(peakGust * 1.1, 10), 5)}
-                    formatTick={(tick) => String(Math.round(tick))}
+                    ticks={fmt.windTicks(0, Math.max(peakGust * 1.1, 10), 5)}
+                    formatTick={fmt.windTick}
                     colorAt={() => SPEED_COLOR}
                     height={180}
                     fade
@@ -173,14 +177,14 @@ export default function WindPopover({
                             label={relativeLabel(day.date, todayDate)}
                             value={peakGust}
                             max={scaleMax}
-                            display={`${Math.round(peakGust)} km/h`}
+                            display={`${fmt.wind(peakGust)} ${fmt.windUnit}`}
                             highlight
                         />
                         <BarRow
                             label={relativeLabel(previous.date, todayDate)}
                             value={previousPeakGust}
                             max={scaleMax}
-                            display={`${Math.round(previousPeakGust)} km/h`}
+                            display={`${fmt.wind(previousPeakGust)} ${fmt.windUnit}`}
                         />
                     </div>
                 </PopoverSection>
@@ -200,12 +204,12 @@ export default function WindPopover({
                         <tr className="text-sm font-semibold text-white/60">
                             <th className="pb-2 font-semibold">bft</th>
                             <th className="pb-2 font-semibold">Description</th>
-                            <th className="pb-2 text-right font-semibold">km/h</th>
+                            <th className="pb-2 text-right font-semibold">{fmt.windUnit}</th>
                         </tr>
                     </thead>
 
                     <tbody>
-                        {BEAUFORT.map((level) => (
+                        {BEAUFORT.map((level, index) => (
                             <tr
                                 key={level.force}
                                 className={`border-t border-white/10 ${
@@ -223,7 +227,7 @@ export default function WindPopover({
                                 </td>
                                 <td className="py-2 text-white/70">{level.label}</td>
                                 <td className="py-2 pr-1 text-right text-white/70">
-                                    {level.range}
+                                    {fmt.beaufortRange(level, BEAUFORT[index + 1])}
                                 </td>
                             </tr>
                         ))}

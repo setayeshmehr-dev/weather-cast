@@ -1,6 +1,8 @@
 import WeatherCard from "@/components/weather/WeatherCard";
 import type { CurrentWeather } from "@/hooks/useWeather";
 import { CARD_LABEL, CARD_TEXT, CARD_VALUE } from "@/lib/cardText";
+import { useFormat } from "@/hooks/useFormat";
+
 
 // Heuristics for the explanation text (the API does not say why it feels different).
 const WIND_THRESHOLD = 10; // km/h
@@ -21,6 +23,8 @@ function describe(difference: number, current: CurrentWeather): string {
             : "It feels warmer than actual.";
     }
 
+    
+
     return "Similar to the actual temperature.";
 }
 
@@ -37,8 +41,9 @@ export default function FeelsLikeCard({
     error,
     className,
 }: FeelsLikeCardProps) {
-    const actual = current ? Math.round(current.temperature) : 0;
-    const feelsLike = current ? Math.round(current.feelsLike) : 0;
+    const fmt = useFormat();
+    const actual = current ? fmt.temperature(current.temperature) : 0;
+    const feelsLike = current ? fmt.temperature(current.feelsLike) : 0;
     const difference = feelsLike - actual;
 
     // The track shows a window of 2.4x the difference (at least 6°).

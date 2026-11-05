@@ -4,7 +4,7 @@ import { Trash } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import { createPortal } from "react-dom";
-
+import { useFormat } from "@/hooks/useFormat";
 import WeatherVideo from "@/components/weather/WeatherVideo";
 import type { CitySummary } from "@/hooks/useCitySummaries";
 import type { City } from "@/lib/cities";
@@ -13,6 +13,7 @@ import { getWeatherVideoName } from "@/lib/weatherVideo";
 
 const PLACEHOLDER_BACKGROUND =
     "linear-gradient(160deg, #3b4a63 0%, #566580 100%)";
+
 
 function localTime(summary: CitySummary, now: number | null): string {
     if (now === null) return summary.time.slice(11, 16);
@@ -83,7 +84,7 @@ export default function CityCard({
             document.addEventListener("keydown", handleKeyDown);
             window.addEventListener("blur", close);
         }, 0);
-
+        
         return () => {
             window.clearTimeout(id);
             document.removeEventListener("keydown", handleKeyDown);
@@ -102,7 +103,7 @@ export default function CityCard({
         setMenu(null);
         onRemove();
     };
-
+    const fmt = useFormat();
     return (
         <div className="relative">
             <button
@@ -154,7 +155,7 @@ export default function CityCard({
 
                     {summary ? (
                         <p className="text-4xl leading-none font-light">
-                            {Math.round(summary.temperature)}°
+                            {fmt.temperature(summary.temperature)}°
                         </p>
                     ) : (
                         <Bone className="h-9 w-14 rounded-lg" />
@@ -166,7 +167,7 @@ export default function CityCard({
                         <>
                             <span className="truncate">{summary.condition}</span>
                             <span className="shrink-0">
-                                {`H:${Math.round(summary.max)}° L:${Math.round(summary.min)}°`}
+                                {`H:${fmt.temperature(summary.max)}° L:${fmt.temperature(summary.min)}°`}
                             </span>
                         </>
                     ) : (

@@ -2,7 +2,7 @@
 
 import { Drop } from "@phosphor-icons/react";
 import { useState } from "react";
-
+import { useFormat } from "@/hooks/useFormat";
 import DayChart from "@/components/weather/popover/DayChart";
 import DayPicker from "@/components/weather/popover/DayPicker";
 import DetailPopover from "@/components/weather/popover/DetailPopover";
@@ -31,6 +31,7 @@ export default function PrecipitationPopover({
     current,
     initialDate,
 }: PrecipitationPopoverProps) {
+    const fmt = useFormat();
     const todayDate = details.days[details.todayIndex].date;
     const [date, setDate] = useState(initialDate);
 
@@ -43,9 +44,11 @@ export default function PrecipitationPopover({
     const total = rain.reduce((sum, value) => sum + value, 0);
     const nowHour = isToday ? hourFraction(current.time) : null;
 
+    const unit = fmt.precipitationUnit;
+
     const summary = isToday
-        ? `There has been ${formatMm(current.precipitationLast24h)} mm of precipitation in the last 24 hours. Today's total precipitation will be ${formatMm(total)} mm.`
-        : `${weekdayLong(day.date)}'s total precipitation will be ${formatMm(total)} mm.`;
+        ? `There has been ${formatMm(current.precipitationLast24h)} ${unit} of precipitation in the last 24 hours. Today's total precipitation will be ${formatMm(total)} ${unit}.`
+        : `${weekdayLong(day.date)}'s total precipitation will be ${formatMm(total)} ${unit}.`;
 
     return (
         <DetailPopover
@@ -63,7 +66,7 @@ export default function PrecipitationPopover({
 
             <PopoverHeadline
                 value={formatMm(total)}
-                unit="mm"
+                unit={fmt.precipitationUnit}
                 caption="Total for the day"
             />
 
@@ -105,7 +108,7 @@ export default function PrecipitationPopover({
                             </p>
                             <p className="flex justify-between text-lg font-semibold">
                                 Precipitation
-                                <span>{formatMm(current.precipitationLast24h)} mm</span>
+                                <span>{formatMm(current.precipitationLast24h)} {fmt.precipitationUnit}</span>
                             </p>
                         </div>
 
@@ -115,7 +118,7 @@ export default function PrecipitationPopover({
                             </p>
                             <p className="flex justify-between text-lg font-semibold">
                                 Precipitation
-                                <span>{formatMm(current.precipitationNext24h)} mm</span>
+                                <span>{formatMm(current.precipitationNext24h)} {fmt.precipitationUnit}</span>
                             </p>
                         </div>
                     </div>

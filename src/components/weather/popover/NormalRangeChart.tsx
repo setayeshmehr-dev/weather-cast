@@ -1,8 +1,9 @@
 "use client";
 
 import { useId } from "react";
+import { useFormat } from "@/hooks/useFormat";
+import { smoothPath } from "@/lib/chart";
 
-import { niceTicks, smoothPath } from "@/lib/chart";
 
 const WIDTH = 300;
 const GUTTER = 46;
@@ -26,13 +27,14 @@ export default function NormalRangeChart({
     high,
     ariaLabel,
 }: NormalRangeChartProps) {
+    const fmt = useFormat();
     const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
     const bandId = `${id}-band`;
     const lineId = `${id}-line`;
 
     const known = today.filter((value): value is number => value !== null);
     const everything = [...low, ...high, ...known];
-    const ticks = niceTicks(Math.min(...everything), Math.max(...everything), 6);
+    const ticks = fmt.temperatureTicks(Math.min(...everything), Math.max(...everything), 6);
     const min = ticks[0];
     const max = ticks[ticks.length - 1];
     const span = max - min || 1;
@@ -61,7 +63,7 @@ export default function NormalRangeChart({
             <div className="pointer-events-none absolute top-3 left-4">
                 <p className="text-sm font-semibold">Today&apos;s High</p>
                 <p className="text-3xl leading-tight font-medium">
-                    {Math.round(highest)}°
+                    {fmt.temperature(highest)}°
                 </p>
             </div>
 
@@ -102,7 +104,7 @@ export default function NormalRangeChart({
                             fill="#ffffff"
                             fillOpacity={0.6}
                         >
-                            {Math.round(tick)}°
+                            {fmt.temperature(tick)}°
                         </text>
                     </g>
                 ))}

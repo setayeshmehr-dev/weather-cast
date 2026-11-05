@@ -1,4 +1,5 @@
 import { windDirectionName } from "@/lib/windDirection";
+import { useFormat } from "@/hooks/useFormat";
 
 type WindMarkerProps = {
     city: string;
@@ -13,10 +14,12 @@ export default function WindMarker({
 }: WindMarkerProps) {
     const directionName = windDirectionName(direction);
 
+    const fmt = useFormat();
+
     return (
         <div
             role="img"
-            aria-label={`${city}: wind from ${directionName} at ${Math.round(speed)} kilometers per hour`}
+            aria-label={`${city}: wind from ${directionName} at ${fmt.wind(speed)} ${fmt.windUnit}`}
             className="pointer-events-none relative size-0"
         >
             <div className="absolute top-0 left-0 flex size-12 -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center gap-0.5 rounded-full bg-white shadow-lg">
@@ -25,11 +28,11 @@ export default function WindMarker({
                 </span>
 
                 <span className="text-[20px] leading-none font-bold text-[#2f7fd1]">
-                    {Math.round(speed)}
+                    {fmt.wind(speed)}
                 </span>
 
                 <span className="text-[7px] leading-none font-semibold tracking-wide text-gray-500 uppercase">
-                    km/h
+                    {fmt.windUnit}
                 </span>
             </div>
 

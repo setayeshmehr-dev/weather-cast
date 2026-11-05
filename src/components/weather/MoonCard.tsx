@@ -14,6 +14,7 @@ const MOON_IMAGE = "/images/moon.webp";
 // Mirrors a drawing horizontally inside the 100x100 box.
 const MIRROR = "translate(100 0) scale(-1 1)";
 
+
 /*
  * Lit part of the disk for the header icon (lit on the right): the limb is a
  * semicircle and the terminator an ellipse arc.
@@ -21,6 +22,7 @@ const MIRROR = "translate(100 0) scale(-1 1)";
 function crescentPath(illumination: number): string {
     const radiusX = 48 * Math.abs(1 - 2 * illumination);
     const sweep = illumination > 0.5 ? 1 : 0;
+    
 
     return `M 50 2 A 48 48 0 0 1 50 98 A ${radiusX.toFixed(2)} 48 0 0 ${sweep} 50 2 Z`;
 }

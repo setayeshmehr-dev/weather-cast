@@ -12,6 +12,7 @@ import { useMonthlyClimate } from "@/hooks/useMonthlyClimate";
 import type { City } from "@/lib/cities";
 import { hoursOfDay } from "@/lib/dayLabels";
 import { rangeGradient } from "@/lib/temperatureColor";
+import { useFormat } from "@/hooks/useFormat";
 
 type Tab = "temperature" | "precipitation";
 
@@ -53,14 +54,16 @@ export default function AveragesPopover({
 }: AveragesPopoverProps) {
     const [tab, setTab] = useState<Tab>("temperature");
     const monthly = useMonthlyClimate(city);
+    const fmt = useFormat();
 
     const today = details.days[details.todayIndex];
     const month = Number(today.date.slice(5, 7)) - 1;
     const day = Number(today.date.slice(8, 10));
     const todayHours = hoursOfDay(details, today.date).map((hour) => hour.temperature);
 
-    const high = Math.round(current.max);
-    const difference = normals ? high - Math.round(normals.averageHigh) : 0;
+    const high = fmt.temperature(current.max);
+    const difference = normals ? high - fmt.temperature(normals.averageHigh) : 0;
+
 
     const headline = !normals
         ? null
@@ -109,8 +112,7 @@ export default function AveragesPopover({
                             <>
                                 <p className="text-2xl font-semibold">{headline}</p>
                                 <p className="mt-0.5 text-sm font-medium text-white/60">
-                                    Average high: {Math.round(normals!.averageHigh)}°
-                                </p>
+                                    Average high: {fmt.temperature(normals!.averageHigh)}°                                </p>
                             </>
                         ) : (
                             <div className="flex flex-col gap-2">
@@ -140,8 +142,8 @@ export default function AveragesPopover({
                                 </span>
                                 <span className="flex items-center gap-2">
                                     <span className="size-3 rounded-full bg-[#5f9aa0]" />
-                                    Normal Range ({Math.round(normals.rangeMin)}° to{" "}
-                                    {Math.round(normals.rangeMax)}°)
+                                    Normal Range ({fmt.temperature(normals.rangeMin)}° to{" "}
+                                    {fmt.temperature(normals.rangeMax)}°)
                                 </span>
                             </div>
                         )}
@@ -150,7 +152,7 @@ export default function AveragesPopover({
                     {normals && (
                         <PopoverSection title="Summary">
                             <p className="text-base leading-snug text-white/90">
-                                {`For ${MONTHS[month]} ${day}, the normal temperature range is ${Math.round(normals.rangeMin)}° to ${Math.round(normals.rangeMax)}°, and the average high is ${Math.round(normals.averageHigh)}°. Today's high temperature is ${high}°.`}
+                                {`For ${MONTHS[month]} ${day}, the normal temperature range is ${fmt.temperature(normals.rangeMin)}° to ${fmt.temperature(normals.rangeMax)}°, and the average high is ${fmt.temperature(normals.averageHigh)}°. Today's high temperature is ${high}°.`}
                             </p>
                         </PopoverSection>
                     )}
@@ -159,7 +161,7 @@ export default function AveragesPopover({
                         title="Monthly Averages"
                         subtitle={
                             rows
-                                ? `For ${MONTHS[month]}, the average daily low is ${Math.round(rows.lows[month])}°, and the average daily high is ${Math.round(rows.highs[month])}°.`
+                                ? `For ${MONTHS[month]}, the average daily low is ${fmt.temperature(rows.lows[month])}°, and the average daily high is ${fmt.temperature(rows.highs[month])}°.`
                                 : undefined
                         }
                     >
@@ -186,7 +188,7 @@ export default function AveragesPopover({
                                             {name.slice(0, 3)}
                                         </span>
                                         <span className="w-9 shrink-0 text-right text-white/50">
-                                            {Math.round(rows.lows[index])}°
+                                            {fmt.temperature(rows.lows[index])}°
                                         </span>
 
                                         <div className="relative h-1.5 flex-1 rounded-full bg-black/25">
@@ -204,7 +206,7 @@ export default function AveragesPopover({
                                         </div>
 
                                         <span className="w-9 shrink-0 font-semibold">
-                                            {Math.round(rows.highs[index])}°
+                                            {fmt.temperature(rows.highs[index])}°
                                         </span>
                                     </li>
                                 ))}
@@ -220,7 +222,7 @@ export default function AveragesPopover({
                         {rows ? (
                             <>
                                 <p className="text-2xl font-semibold">
-                                    {Math.round(rows.rain[month])} mm
+                                    {fmt.precipitationTotal(rows.rain[month])} {fmt.precipitationUnit}
                                 </p>
                                 <p className="mt-0.5 text-sm font-medium text-white/60">
                                     Average precipitation in {MONTHS[month]}
@@ -270,7 +272,7 @@ export default function AveragesPopover({
                                         </div>
 
                                         <span className="w-16 shrink-0 pr-1 text-right font-semibold">
-                                            {Math.round(rows.rain[index])} mm
+                                            {fmt.precipitationTotal(rows.rain[index])} {fmt.precipitationUnit}
                                         </span>
                                     </li>
                                 ))}

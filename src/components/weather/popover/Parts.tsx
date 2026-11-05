@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-
+import { useFormat } from "@/hooks/useFormat";
 import { rangeGradient } from "@/lib/temperatureColor";
 
 type PopoverSectionProps = {
@@ -61,12 +61,13 @@ export function RangeRow({ label, min, max, scaleMin, scaleMax, dot }: RangeRowP
     const span = Math.max(scaleMax - scaleMin, 1);
     const left = ((min - scaleMin) / span) * 100;
     const width = ((max - min) / span) * 100;
+    const fmt = useFormat();
 
     return (
         <div className="flex items-center gap-3 text-lg">
             <span className="w-22 shrink-0 font-semibold">{label}</span>
             <span className="w-9 shrink-0 text-right text-white/50">
-                {Math.round(min)}°
+                {fmt.temperature(min)}°
             </span>
 
             <div className="relative h-1.5 flex-1 rounded-full bg-black/25">
@@ -87,7 +88,7 @@ export function RangeRow({ label, min, max, scaleMin, scaleMax, dot }: RangeRowP
                 )}
             </div>
 
-            <span className="w-9 shrink-0 font-semibold">{Math.round(max)}°</span>
+            <span className="w-9 shrink-0 font-semibold">{fmt.temperature(max)}°</span>
         </div>
     );
 }

@@ -1,6 +1,7 @@
 import WeatherCard from "@/components/weather/WeatherCard";
 import type { CurrentWeather } from "@/hooks/useWeather";
 import { CARD_TEXT, CARD_VALUE } from "@/lib/cardText";
+import { useFormat } from "@/hooks/useFormat";
 
 type VisibilityCardProps = {
     current: CurrentWeather | null;
@@ -35,7 +36,7 @@ export default function VisibilityCard({
 
     // Open-Meteo returns the visibility in meters.
     const km = validVisibility ? visibility / 1000 : null;
-
+    const fmt = useFormat();
     return (
         <WeatherCard
             title="VISIBILITY"
@@ -59,9 +60,9 @@ export default function VisibilityCard({
                             "—"
                         ) : (
                             <>
-                                {formatKm(km)}
+                                {fmt.distance(km)}
                                 <span className="ml-[0.2em] text-[0.57em] text-white/80">
-                                    km
+                                    {fmt.distanceUnit}
                                 </span>
                             </>
                         )}

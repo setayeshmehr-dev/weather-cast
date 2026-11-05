@@ -3,7 +3,7 @@
 import { ArrowLeft, Moon } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
-
+import { useFormat } from "@/hooks/useFormat";
 import DetailPopover from "@/components/weather/popover/DetailPopover";
 import MoonCalendar from "@/components/weather/popover/MoonCalendar";
 import MoonDisc from "@/components/weather/popover/MoonDisc";
@@ -44,6 +44,7 @@ export default function MoonPopover({
     latitude,
     longitude,
 }: MoonPopoverProps) {
+    const fmt = useFormat();
     const timeZone = current.timezone;
     const clock = useMemo(() => createLocalClock(timeZone), [timeZone]);
 
@@ -223,8 +224,8 @@ export default function MoonPopover({
                 </Row>
 
                 <Row label="Distance">
-                    {Math.round(snapshot.distanceKm).toLocaleString("en-US")}{" "}
-                    <span className="text-[0.75em] uppercase">km</span>
+                    {fmt.longDistance(snapshot.distanceKm)}{" "}
+                    <span className="text-[0.75em] uppercase">{fmt.distanceUnit}</span>
                 </Row>
             </div>
 

@@ -1,5 +1,6 @@
 import WeatherCard from "@/components/weather/WeatherCard";
 import type { CurrentWeather, PressureTrend } from "@/hooks/useWeather";
+import { useFormat } from "@/hooks/useFormat";
 
 // Gauge scale in hPa, centered on standard sea-level pressure (1013 hPa).
 const PRESSURE_MIN = 963;
@@ -36,6 +37,8 @@ function PressureGauge({ pressure, trend }: PressureGaugeProps) {
         1
     );
     const needleAngle = START_ANGLE + ratio * SWEEP;
+
+    const fmt = useFormat();
 
     return (
         <svg
@@ -78,10 +81,10 @@ function PressureGauge({ pressure, trend }: PressureGaugeProps) {
                     {TREND_SYMBOL[trend]}
                 </text>
                 <text x={50} y={56} fontSize={17} fontWeight={600}>
-                    {Math.round(pressure)}
+                    {fmt.pressure(pressure)}
                 </text>
                 <text x={50} y={70} fontSize={10.5} fillOpacity={0.8}>
-                    hPa
+                    {fmt.pressureUnit}
                 </text>
 
                 <text x={23} y={94.5} fontSize={11}>

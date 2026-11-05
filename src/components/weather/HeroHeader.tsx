@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useFormat } from "@/hooks/useFormat";
 
 import type { CurrentWeather } from "@/hooks/useWeather";
 import {
@@ -26,12 +27,11 @@ type LineProps = {
  */
 function Line({ variable, height, direction, hidden, children }: LineProps) {
     const opacity =
-        direction === "out"
-            ? `clamp(0, calc(var(${variable}) * 2 - 0.6), 1)`
-            : `clamp(0, calc(var(${variable}) * 2 - 0.8), 1)`;
+        direction === "out" ? `clamp(0, calc(var(${variable}) * 2 - 0.6), 1)` : `clamp(0, calc(var(${variable}) * 2 - 0.8), 1)`;
 
-    return (
-        <div
+        
+        return (
+            <div
             aria-hidden={hidden}
             className="flex w-full justify-center overflow-hidden"
             style={{
@@ -39,11 +39,11 @@ function Line({ variable, height, direction, hidden, children }: LineProps) {
                 opacity,
                 willChange: "height, opacity",
             }}
-        >
+            >
             <div
                 className="flex shrink-0 items-start justify-center"
                 style={{ height, lineHeight: `${height}px` }}
-            >
+                >
                 {children}
             </div>
         </div>
@@ -65,6 +65,7 @@ export default function HeroHeader({
     error,
     onRetry,
 }: HeroHeaderProps) {
+    const fmt = useFormat();
     return (
         <div
             className="flex flex-col items-center text-center text-white"
@@ -105,7 +106,7 @@ export default function HeroHeader({
                         direction="out"
                     >
                         <span className="text-[96px] font-extralight">
-                            {Math.round(current.temperature)}°
+                            {fmt.temperature(current.temperature)}°
                         </span>
                     </Line>
 
@@ -126,7 +127,7 @@ export default function HeroHeader({
                         direction="out"
                     >
                         <span className="text-xl font-semibold text-white/85">
-                            H:{Math.round(current.max)}° L:{Math.round(current.min)}°
+                            H:{fmt.temperature(current.max)}° L:{fmt.temperature(current.min)}°
                         </span>
                     </Line>
 

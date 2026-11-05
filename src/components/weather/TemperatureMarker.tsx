@@ -1,4 +1,5 @@
 import { temperatureColor } from "@/lib/temperatureColor";
+import { useFormat } from "@/hooks/useFormat";
 
 const CENTER = 28;
 const RING_RADIUS = 23;
@@ -10,7 +11,7 @@ const SEGMENTS = 36;
 
 function polar(angle: number, radius: number) {
     const radians = (angle * Math.PI) / 180;
-
+    
     return {
         x: CENTER + radius * Math.sin(radians),
         y: CENTER - radius * Math.cos(radians),
@@ -30,11 +31,12 @@ export default function TemperatureMarker({
     low,
     high,
 }: TemperatureMarkerProps) {
+    const fmt = useFormat();
     const span = high - low;
     const progress =
         span > 0 ? Math.min(Math.max((temperature - low) / span, 0), 1) : 0;
     const dot = polar(ARC_START + ARC_SWEEP * progress, RING_RADIUS);
-    const text = `${Math.round(temperature)}°`;
+    const text = `${fmt.temperature(temperature)}°`;
 
     const segments = Array.from({ length: SEGMENTS }, (_, index) => {
         const from = polar(
@@ -55,7 +57,7 @@ export default function TemperatureMarker({
     return (
         <div
             role="img"
-            aria-label={`${city}: ${Math.round(temperature)}°, low ${Math.round(low)}°, high ${Math.round(high)}°`}
+            aria-label={`${city}: ${fmt.temperature(temperature)}°, low ${fmt.temperature(low)}°, high ${fmt.temperature(high)}°`}
             className="pointer-events-none relative size-0"
         >
             <svg
@@ -115,7 +117,7 @@ export default function TemperatureMarker({
                         fontWeight={600}
                         fill={temperatureColor(low)}
                     >
-                        {Math.round(low)}
+                        {fmt.temperature(low)}
                     </text>
 
                     <text
@@ -125,7 +127,7 @@ export default function TemperatureMarker({
                         fontWeight={600}
                         fill={temperatureColor(high)}
                     >
-                        {Math.round(high)}
+                        {fmt.temperature(high)}
                     </text>
                 </g>
             </svg>

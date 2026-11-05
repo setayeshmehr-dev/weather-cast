@@ -59,7 +59,6 @@ export default function UVIndexCard({
     const level = uvIndex === null ? null : getUvLevel(uvIndex);
     const position =
         uvIndex === null ? 0 : Math.min(Math.max((uvIndex / 11) * 100, 0), 100);
-
     return (
         <WeatherCard
             title="UV INDEX"

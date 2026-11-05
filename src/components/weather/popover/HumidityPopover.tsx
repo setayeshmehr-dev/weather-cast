@@ -2,7 +2,7 @@
 
 import { Waves } from "@phosphor-icons/react";
 import { useState } from "react";
-
+import { useFormat } from "@/hooks/useFormat";
 import DayChart from "@/components/weather/popover/DayChart";
 import DayPicker from "@/components/weather/popover/DayPicker";
 import DetailPopover from "@/components/weather/popover/DetailPopover";
@@ -67,6 +67,7 @@ export default function HumidityPopover({
     current,
     initialDate,
 }: HumidityPopoverProps) {
+    const fmt = useFormat();
     const todayDate = details.days[details.todayIndex].date;
     const [date, setDate] = useState(initialDate);
 
@@ -87,7 +88,7 @@ export default function HumidityPopover({
     const shownDewPoint = isToday ? current.dewPoint : mean(dewPoints);
 
     const dewRange = dewPoints.length
-        ? ` The dew point is ${Math.round(Math.min(...dewPoints))}° to ${Math.round(Math.max(...dewPoints))}°.`
+        ? ` The dew point is ${fmt.temperature(Math.min(...dewPoints))}° to ${fmt.temperature(Math.max(...dewPoints))}°.`
         : "";
 
     const summary = `${isToday ? "Today" : weekdayLong(day.date)}, the average humidity ${isToday ? "is" : "will be"} ${Math.round(average)}%.${dewRange}`;
@@ -114,7 +115,7 @@ export default function HumidityPopover({
                 caption={
                     shownDewPoint === null
                         ? "Dew point unavailable"
-                        : `Dew point: ${Math.round(shownDewPoint)}°`
+                        : `Dew point: ${fmt.temperature(shownDewPoint)}°`
                 }
             />
 

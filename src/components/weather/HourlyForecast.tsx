@@ -5,6 +5,7 @@ import WeatherCard from "@/components/weather/WeatherCard";
 import WeatherIcon from "@/components/weather/WeatherIcon";
 import type { CurrentWeather, ForecastItem } from "@/hooks/useWeather";
 import { getWeatherIcon } from "@/hooks/useWeather";
+import { useFormat } from "@/hooks/useFormat";
 
 function formatTime(time: string): string {
     return time.slice(11, 16);
@@ -23,6 +24,9 @@ export default function HourlyForecast({
     loading,
     error,
 }: HourlyForecastProps) {
+
+    const fmt = useFormat();
+
     return (
         <WeatherCard skeleton="strip" title="HOURLY FORECAST" divided>
             {loading && (
@@ -54,7 +58,7 @@ export default function HourlyForecast({
                             />
 
                             <span className="text-lg font-medium">
-                                {Math.round(current.temperature)}°
+                                {fmt.temperature(current.temperature)}°
                             </span>
                         </div>
                     )}
@@ -85,7 +89,7 @@ export default function HourlyForecast({
 
                                 <span className="text-lg font-medium">
                                     {isHour
-                                        ? `${Math.round(item.temperature)}°`
+                                        ? `${fmt.temperature(item.temperature)}°`
                                         : label}
                                 </span>
                             </div>

@@ -1,6 +1,7 @@
 import WeatherCard from "@/components/weather/WeatherCard";
 import type { CurrentWeather } from "@/hooks/useWeather";
 import { CARD_TEXT, CARD_VALUE } from "@/lib/cardText";
+import { useFormat } from "@/hooks/useFormat";
 
 type HumidityCardProps = {
     current: CurrentWeather | null;
@@ -23,6 +24,8 @@ export default function HumidityCard({
 
     const validDewPoint =
         typeof dewPoint === "number" && Number.isFinite(dewPoint);
+
+    const fmt = useFormat();
 
     return (
         <WeatherCard
@@ -48,7 +51,7 @@ export default function HumidityCard({
 
                     <p className={CARD_TEXT}>
                         {validDewPoint
-                            ? `The dew point is ${Math.round(dewPoint)}° right now.`
+                            ? `The dew point is ${fmt.temperature(dewPoint)}° right now.`
                             : "Dew point data is unavailable."}
                     </p>
                 </>

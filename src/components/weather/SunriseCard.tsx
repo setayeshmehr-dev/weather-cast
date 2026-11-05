@@ -12,6 +12,7 @@ import { CARD_VALUE } from "@/lib/cardText";
 
 const MINUTES_PER_DAY = 1440;
 
+
 // Size of the curve drawing; it scales to the width of the card.
 const WIDTH = 144;
 const HEIGHT = 56;

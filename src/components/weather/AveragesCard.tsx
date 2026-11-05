@@ -1,5 +1,6 @@
 import WeatherCard from "@/components/weather/WeatherCard";
 import { CARD_LABEL, CARD_SMALL, CARD_VALUE } from "@/lib/cardText";
+import { useFormat } from "@/hooks/useFormat";
 
 type AveragesCardProps = {
     today: number | null;
@@ -22,9 +23,11 @@ export default function AveragesCard({
     error,
     className,
 }: AveragesCardProps) {
+    const fmt = useFormat();
     const ready = today !== null && average !== null;
-    const difference = ready ? Math.round(today) - Math.round(average) : 0;
+    const difference = ready ? fmt.temperature(today) - fmt.temperature(average) : 0;
     const sign = difference > 0 ? "+" : "";
+    
 
     return (
         <WeatherCard
@@ -64,13 +67,13 @@ export default function AveragesCard({
                         <div className="flex justify-between">
                             <dt className="text-white/50">Today</dt>
                             <dd className="font-semibold">
-                                H:{Math.round(today)}°
+                                 H:{fmt.temperature(today)}°
                             </dd>
                         </div>
                         <div className="flex justify-between">
                             <dt className="text-white/50">Average</dt>
                             <dd className="font-semibold">
-                                H:{Math.round(average)}°
+                                H:{fmt.temperature(average)}°
                             </dd>
                         </div>
                     </dl>

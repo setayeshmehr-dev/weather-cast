@@ -1,5 +1,6 @@
 import WeatherIcon from "@/components/weather/WeatherIcon";
 import { getWeatherIcon } from "@/hooks/useWeather";
+import { useFormat } from "@/hooks/useFormat";
 
 type PrecipitationMarkerProps = {
     city: string;
@@ -14,10 +15,13 @@ export default function PrecipitationMarker({
     weatherCode,
     isDay,
 }: PrecipitationMarkerProps) {
+
+    const fmt = useFormat();
+    
     return (
         <div
             role="img"
-            aria-label={`${city}: ${Math.round(temperature)}°`}
+            aria-label={`${city}: ${fmt.temperature(temperature)}°`}
             className="pointer-events-none relative size-0"
         >
             <div className="absolute -top-19.75 left-1/2 h-14 w-14 -translate-x-1/2 drop-shadow-md">
@@ -43,7 +47,7 @@ export default function PrecipitationMarker({
 
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 pt-2 text-white">
                     <span className="text-[19px] leading-none font-bold">
-                        {Math.round(temperature)}°
+                        {fmt.temperature(temperature)}°
                     </span>
 
                     <WeatherIcon

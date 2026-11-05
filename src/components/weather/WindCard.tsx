@@ -1,6 +1,7 @@
 import WeatherCard from "@/components/weather/WeatherCard";
 import type { CurrentWeather } from "@/hooks/useWeather";
 import { WIDE_TEXT } from "@/lib/cardText";
+import { useFormat } from "@/hooks/useFormat";
 
 const DIRECTIONS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 
@@ -20,6 +21,8 @@ const CARDINALS = [
 // A cardinal letter fades out when the arrow or the dot passes within this angle (degrees).
 const LETTER_CLEARANCE = 18;
 
+
+
 function directionName(degrees: number): string {
     return DIRECTIONS[Math.round(degrees / 45) % 8];
 }
@@ -38,12 +41,12 @@ type CompassProps = {
 function Compass({ speed, direction }: CompassProps) {
     // Meteorological direction = where the wind comes FROM; the arrow points where it goes TO.
     const heading = (direction + 180) % 360;
-
+    const fmt = useFormat();
     return (
         <svg
             viewBox="0 0 124 124"
             role="img"
-            aria-label={`Wind from ${directionName(direction)} at ${Math.round(speed)} kilometers per hour`}
+            aria-label={`Wind from ${directionName(direction)} at ${fmt.wind(speed)} ${fmt.windUnit}`}
             className="block h-auto w-full text-white"
         >
             <g stroke="currentColor" strokeOpacity={0.3} strokeWidth={1}>
@@ -93,7 +96,7 @@ function Compass({ speed, direction }: CompassProps) {
                 textAnchor="middle"
                 dominantBaseline="central"
             >
-                {Math.round(speed)}
+                {fmt.wind(speed)}
             </text>
 
             <text
@@ -105,7 +108,7 @@ function Compass({ speed, direction }: CompassProps) {
                 textAnchor="middle"
                 dominantBaseline="central"
             >
-                km/h
+                {fmt.windUnit}
             </text>
 
             <g transform={`rotate(${heading} 62 62)`}>
@@ -157,10 +160,11 @@ export default function WindCard({
     error,
     className,
 }: WindCardProps) {
+    const fmt = useFormat();
     const rows = current
         ? [
-            { label: "Wind", value: `${Math.round(current.windSpeed)} km/h` },
-            { label: "Gusts", value: `${Math.round(current.windGusts)} km/h` },
+            { label: "Wind", value: `${fmt.wind(current.windSpeed)} ${fmt.windUnit}` },
+            { label: "Gusts", value: `${fmt.wind(current.windGusts)} ${fmt.windUnit}` },
             {
                 label: "Direction",
                 value: `${Math.round(current.windDirection)}° ${directionName(current.windDirection)}`,

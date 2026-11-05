@@ -1,6 +1,7 @@
 import WeatherCard from "@/components/weather/WeatherCard";
 import type { CurrentWeather } from "@/hooks/useWeather";
 import { CARD_CAPTION, CARD_TEXT, CARD_VALUE } from "@/lib/cardText";
+import { useFormat } from "@/hooks/useFormat";
 
 function formatMm(value: number): string {
     return value < 0.05 ? "0" : value.toFixed(1);
@@ -19,6 +20,9 @@ export default function PrecipitationCard({
     error,
     className,
 }: PrecipitationCardProps) {
+    
+    
+    const fmt = useFormat();
     return (
         <WeatherCard
             title="PRECIPITATION"
@@ -44,9 +48,9 @@ export default function PrecipitationCard({
                 <>
                     <div>
                         <p className={CARD_VALUE}>
-                            {formatMm(current.precipitationLast24h)}
+                            {fmt.precipitation(current.precipitationLast24h)}
                             <span className="ml-[0.2em] text-[0.57em] text-white/80">
-                                mm
+                                {fmt.precipitationUnit}
                             </span>
                         </p>
                         <p className={`mt-[3cqw] ${CARD_CAPTION}`}>
@@ -57,7 +61,7 @@ export default function PrecipitationCard({
                     <p className={CARD_TEXT}>
                         {current.precipitationNext24h < 0.05
                             ? "None expected in next 24h."
-                            : `${formatMm(current.precipitationNext24h)} mm expected in next 24h.`}
+                            : `${fmt.precipitation(current.precipitationNext24h)} ${fmt.precipitationUnit} expected in next 24h.`}
                     </p>
                 </>
             )}

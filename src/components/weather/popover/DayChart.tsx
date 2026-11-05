@@ -2,7 +2,6 @@
 
 import { useId } from "react";
 import type { ReactNode } from "react";
-
 import { smoothPath } from "@/lib/chart";
 
 const WIDTH = 300;
@@ -163,7 +162,7 @@ export default function DayChart({
         );
 
     return (
-        <div className="rounded-xl border border-white/10 bg-white/[0.04] px-2 pt-2">
+        <div className="rounded-xl border border-white/10 bg-white/4 px-2 pt-2">
             {renderTop && (
                 <div
                     className="mb-1 grid items-center text-center text-[11px] font-medium"

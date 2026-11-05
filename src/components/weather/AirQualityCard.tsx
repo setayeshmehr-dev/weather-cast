@@ -24,9 +24,8 @@ export default function AirQualityCard({
     error,
     className,
 }: AirQualityCardProps) {
-    const position = airQuality
-        ? Math.min(Math.max(airQuality.index, 0), 100)
-        : 0;
+    const position = airQuality ? Math.min(Math.max(airQuality.index, 0), 100): 0;
+
 
     return (
         <WeatherCard

@@ -2,7 +2,7 @@
 
 import { Eye } from "@phosphor-icons/react";
 import { useState } from "react";
-
+import { useFormat } from "@/hooks/useFormat";
 import DayChart from "@/components/weather/popover/DayChart";
 import DayPicker from "@/components/weather/popover/DayPicker";
 import DetailPopover from "@/components/weather/popover/DetailPopover";
@@ -84,7 +84,7 @@ export default function VisibilityPopover({
     const comparison = ratio >= 1.1 ? "better than" : ratio <= 0.9 ? "worse than" : "similar to";
 
     const scaleMax = Math.max(average, previousAverage, 1);
-
+    const fmt = useFormat();
     return (
         <DetailPopover
             anchor={anchor}
@@ -101,15 +101,15 @@ export default function VisibilityPopover({
 
             <PopoverHeadline
                 value={formatKm(shown)}
-                unit="km"
+                unit={fmt.distanceUnit}
                 caption={describe(shown)}
             />
 
             <div className="px-4 pb-4">
                 <DayChart
                     values={values}
-                    ticks={niceTicks(0, Math.max(10, highest * 1.1), 5)}
-                    formatTick={(tick) => (tick === 0 ? "0 km" : String(tick))}
+                    ticks={fmt.distanceTicks(0, Math.max(10, highest * 1.1), 5)}
+                    formatTick={(tick) => (tick === 0 ? `0 ${fmt.distanceUnit}` : fmt.distanceTick(tick))}
                     colorAt={() => "#ffffff"}
                     height={200}
                     fade
@@ -118,7 +118,7 @@ export default function VisibilityPopover({
                         <span>
                             {values[hour] === null || values[hour] === undefined
                                 ? "–"
-                                : Math.round(values[hour] as number)}
+                                : fmt.distanceWhole(values[hour] as number)}
                         </span>
                     )}
                     ariaLabel={`Visibility chart ${sentenceLabel(day.date, todayDate)}`}
@@ -128,7 +128,7 @@ export default function VisibilityPopover({
             <PopoverSection title="Daily Summary">
                 <p className="text-base leading-snug text-white/90">
                     {kms.length
-                        ? `${isToday ? "Today" : sentenceLabel(day.date, todayDate)}, the visibility will be ${describe(average).toLowerCase()}, at ${formatKm(lowest)} to ${formatKm(highest)} km.`
+                        ? `${isToday ? "Today" : sentenceLabel(day.date, todayDate)}, the visibility will be ${describe(average).toLowerCase()}, at ${formatKm(lowest)} to ${formatKm(highest)} ${fmt.distanceUnit}.`
                         : "No visibility data for this day."}
                 </p>
             </PopoverSection>
@@ -144,15 +144,14 @@ export default function VisibilityPopover({
                             label={relativeLabel(day.date, todayDate)}
                             value={average}
                             max={scaleMax}
-                            display={`${formatKm(average)} km`}
+                            display={`${formatKm(average)} ${fmt.distanceUnit}`}
                             highlight
                         />
                         <BarRow
                             label={relativeLabel(previous.date, todayDate)}
                             value={previousAverage}
                             max={scaleMax}
-                            display={`${formatKm(previousAverage)} km`}
-                        />
+                            display={`${formatKm(previousAverage)} ${fmt.distanceUnit}`}                        />
                     </div>
                 </PopoverSection>
             )}

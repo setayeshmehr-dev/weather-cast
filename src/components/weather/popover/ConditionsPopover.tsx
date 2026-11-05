@@ -2,7 +2,7 @@
 
 import { Cloud } from "@phosphor-icons/react";
 import { useState } from "react";
-
+import { useFormat } from "@/hooks/useFormat";
 import DayChart from "@/components/weather/popover/DayChart";
 import DayPicker from "@/components/weather/popover/DayPicker";
 import DetailPopover from "@/components/weather/popover/DetailPopover";
@@ -34,6 +34,7 @@ const formatMm = (value: number) => (value < 0.05 ? "0" : value.toFixed(1));
 
 function compare(value: number, previous: number): string {
     const difference = Math.round(value) - Math.round(previous);
+    
 
     if (difference >= 2) return "higher than";
     if (difference <= -2) return "lower than";
@@ -57,6 +58,7 @@ export default function ConditionsPopover({
     initialDate,
     initialMode = "actual",
 }: ConditionsPopoverProps) {
+    const fmt = useFormat();
     const todayDate = details.days[details.todayIndex].date;
 
     const [date, setDate] = useState(initialDate);
@@ -75,10 +77,10 @@ export default function ConditionsPopover({
 
     const low = Math.min(...temperatures);
     const high = Math.max(...temperatures);
-    const ticks = niceTicks(low, high, 6);
+    const ticks = fmt.temperatureTicks(low, high, 6);
 
-    const feelsLow = Math.round(Math.min(...feels));
-    const feelsHigh = Math.round(Math.max(...feels));
+    const feelsLow = fmt.temperature(Math.min(...feels));
+    const feelsHigh = fmt.temperature(Math.max(...feels));
     const dayTotal = hours.reduce((sum, hour) => sum + hour.precipitation, 0);
 
     const condition = getWeatherCondition(
@@ -87,13 +89,13 @@ export default function ConditionsPopover({
 
     const feelsDifference = Math.abs(current.feelsLike - current.temperature);
 
-    const forecast = isToday
-        ? `${Math.round(current.temperature)}° now and ${condition}.` +
-          (feelsDifference >= 1
-              ? ` It feels like ${Math.round(current.feelsLike)}°.`
-              : "") +
-          ` Today's temperature range is from ${Math.round(day.min)}° to ${Math.round(day.max)}° and feels like ${feelsLow}° to ${feelsHigh}°.`
-        : `Expect ${condition} ${sentenceLabel(day.date, todayDate)}. The temperature range is from ${Math.round(day.min)}° to ${Math.round(day.max)}° and feels like ${feelsLow}° to ${feelsHigh}°.`;
+        const forecast = isToday
+            ? `${fmt.temperature(current.temperature)}° now and ${condition}.` +
+            (feelsDifference >= 1
+                ? ` It feels like ${fmt.temperature(current.feelsLike)}°.`
+                : "") +
+            ` Today's temperature range is from ${fmt.temperature(day.min)}° to ${fmt.temperature(day.max)}° and feels like ${feelsLow}° to ${feelsHigh}°.`
+            : `Expect ${condition} ${sentenceLabel(day.date, todayDate)}. The temperature range is from ${fmt.temperature(day.min)}° to ${fmt.temperature(day.max)}° and feels like ${feelsLow}° to ${feelsHigh}°.`;
 
     const scaleMin = Math.min(day.min, previous?.min ?? day.min) - 1;
     const scaleMax = Math.max(day.max, previous?.max ?? day.max) + 1;
@@ -113,8 +115,8 @@ export default function ConditionsPopover({
             />
 
             <PopoverHeadline
-                value={`${Math.round(isToday ? current.temperature : day.max)}°`}
-                caption={`H:${Math.round(day.max)}° L:${Math.round(day.min)}°`}
+                value={`${fmt.temperature(isToday ? current.temperature : day.max)}°`}
+                caption={`H:${fmt.temperature(day.max)}° L:${fmt.temperature(day.min)}°`}
                 extra={
                     <WeatherIcon
                         slug={
@@ -132,7 +134,7 @@ export default function ConditionsPopover({
                 <DayChart
                     values={temperatures}
                     ticks={ticks}
-                    formatTick={(value) => `${Math.round(value)}°`}
+                    formatTick={fmt.temperatureTick}
                     colorAt={temperatureColor}
                     nowHour={isToday ? hourFraction(current.time) : null}
                     markers={[
@@ -211,7 +213,7 @@ export default function ConditionsPopover({
                             </p>
                             <p className="flex justify-between text-lg font-semibold">
                                 Precipitation
-                                <span>{formatMm(current.precipitationLast24h)} mm</span>
+                                <span>{formatMm(current.precipitationLast24h)} {fmt.precipitationUnit}</span>
                             </p>
                         </div>
 
@@ -221,7 +223,7 @@ export default function ConditionsPopover({
                             </p>
                             <p className="flex justify-between text-lg font-semibold">
                                 Precipitation
-                                <span>{formatMm(current.precipitationNext24h)} mm</span>
+                                <span>{formatMm(current.precipitationNext24h)} {fmt.precipitationUnit}</span>
                             </p>
                         </div>
                     </div>
@@ -232,7 +234,7 @@ export default function ConditionsPopover({
                         </p>
                         <p className="flex justify-between text-lg font-semibold">
                             Precipitation
-                            <span>{formatMm(dayTotal)} mm</span>
+                            <span>{formatMm(dayTotal)} {fmt.precipitationUnit}</span>
                         </p>
                     </div>
                 )}
