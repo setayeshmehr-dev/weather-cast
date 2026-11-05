@@ -7,15 +7,30 @@ type ScrollArrowProps = {
     visible: boolean;
     /** Vertical middle (px from the top of the card). */
     top: number | null;
+    /** A touch screen: the arrow is a round button inside the card. */
+    touch?: boolean;
     onClick: () => void;
 };
 
 /*
- * The arrow sits on the edge of the card, in the gutter next to it. The button is
- * bigger than the arrow, so reaching for it does not take the pointer out of the card.
+ * With a mouse the arrow sits on the edge of the card, in the gutter next to it, and
+ * the button is bigger than the arrow so reaching for it does not take the pointer out
+ * of the card. On a touch screen it is a round glass button over the list.
  */
-export default function ScrollArrow({ side, visible, top, onClick }: ScrollArrowProps) {
+export default function ScrollArrow({
+    side,
+    visible,
+    top,
+    touch = false,
+    onClick,
+}: ScrollArrowProps) {
     const Icon = side === "left" ? CaretLeft : CaretRight;
+
+    const placement = touch
+        ? `size-10 rounded-full border border-white/25 bg-slate-900/45 backdrop-blur-md ${
+            side === "left" ? "left-2" : "right-2"
+        }`
+        : `h-16 w-10 ${side === "left" ? "-left-7" : "-right-7"}`;
 
     return (
         <button
@@ -27,15 +42,15 @@ export default function ScrollArrow({ side, visible, top, onClick }: ScrollArrow
                 event.stopPropagation();
                 onClick();
             }}
-            className={`absolute z-20 flex h-16 w-10 -translate-y-1/2 cursor-pointer items-center justify-center text-white transition-opacity duration-200 ${
-                side === "left" ? "-left-12" : "-right-12"
-            } ${visible ? "opacity-100" : "pointer-events-none opacity-0"}`}
+            className={`absolute z-20 flex -translate-y-1/2 cursor-pointer items-center justify-center text-white transition-opacity duration-200 ${placement} ${
+                visible ? "opacity-100" : "pointer-events-none opacity-0"
+            }`}
             style={{ top: top ?? "50%" }}
         >
             <Icon
-                size={32}
-                weight="regular"
-                className="drop-shadow-[0_1px_3px_rgba(0,0,0,0.45)]"
+                size={touch ? 20 : 28}
+                weight={touch ? "bold" : "regular"}
+                className={touch ? "" : "drop-shadow-[0_1px_3px_rgba(0,0,0,0.45)]"}
             />
         </button>
     );

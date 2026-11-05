@@ -9,7 +9,7 @@ import UnitsDialog from "@/components/menu/UnitsDialog";
 import type { City } from "@/lib/cities";
 
 const BUTTON_CLASS =
-    "flex size-10 items-center justify-center rounded-full border border-white/20 bg-white/15 text-white backdrop-blur-md transition-colors hover:bg-white/25";
+    "flex size-11 items-center justify-center rounded-full border border-white/20 bg-white/15 text-white backdrop-blur-md transition-colors hover:bg-white/25 md:size-10";
 
 type MenuItemProps = {
     icon: ReactNode;

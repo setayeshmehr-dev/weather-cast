@@ -8,7 +8,7 @@ import { getWeatherIcon } from "@/hooks/useWeather";
 import { useFormat } from "@/hooks/useFormat";
 import { useEffect, useRef, useState } from "react";
 import type { PointerEvent } from "react";
-
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import ScrollArrow from "@/components/weather/ScrollArrow";
 import { useHorizontalScroll } from "@/hooks/useHorizontalScroll";
 
@@ -39,6 +39,8 @@ export default function HourlyForecast({
         useHorizontalScroll<HTMLDivElement>();
 
     const [hovered, setHovered] = useState(false);
+        // No hover on touch screens: the arrows are always shown there.
+    const touch = useMediaQuery("(hover: none)");
     const hideTimer = useRef<number | undefined>(undefined);
 
     useEffect(() => () => window.clearTimeout(hideTimer.current), []);
@@ -71,14 +73,16 @@ export default function HourlyForecast({
                 <>
                     <ScrollArrow
                         side="left"
-                        visible={hovered && edges.left}
+                        visible={(hovered || touch) && edges.left}
                         top={edges.center}
+                        touch={touch}
                         onClick={() => scrollByPage(-1)}
                     />
                     <ScrollArrow
                         side="right"
-                        visible={hovered && edges.right}
+                        visible={(hovered || touch) && edges.right}
                         top={edges.center}
+                        touch={touch}
                         onClick={() => scrollByPage(1)}
                     />
                 </>

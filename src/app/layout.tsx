@@ -31,3 +31,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </html>
     );
 }
+
+import type { Viewport } from "next";
+
+export const viewport: Viewport = {
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
+};

@@ -15,7 +15,7 @@ import type { City } from "@/lib/cities";
 const MOBILE_QUERY = "(max-width: 767px)";
 
 const FLOATING_BUTTON_CLASS =
-    "flex size-10 items-center justify-center rounded-full border border-white/20 bg-white/15 text-white backdrop-blur-md transition-colors hover:bg-white/25";
+    "flex size-11 items-center justify-center rounded-full border border-white/20 bg-white/15 text-white backdrop-blur-md transition-colors hover:bg-white/25 md:size-10";
 
 export default function Home() {
         const {
@@ -103,31 +103,34 @@ export default function Home() {
             </aside>
 
             <div className="relative min-w-0 flex-1 overflow-hidden">
-                <div className="absolute top-0 left-0 z-30 flex items-center gap-2 p-3">
-                    {!sidebarOpen && (
-                        <button
-                            type="button"
-                            onClick={() => setSidebarOpen(true)}
-                            aria-label="Show sidebar"
-                            className={FLOATING_BUTTON_CLASS}
-                        >
-                            <SidebarSimple size={20} />
-                        </button>
-                    )}
+                {/* Everything is placed below the notch / status bar of phones. */}
+                <div className="absolute inset-x-0 top-[env(safe-area-inset-top)] bottom-0">
+                    <div className="absolute top-0 left-0 z-30 flex flex-col items-start gap-2 p-3 md:flex-row md:items-center">
+                        {!sidebarOpen && (
+                            <button
+                                type="button"
+                                onClick={() => setSidebarOpen(true)}
+                                aria-label="Show sidebar"
+                                className={FLOATING_BUTTON_CLASS}
+                            >
+                                <SidebarSimple size={20} />
+                            </button>
+                        )}
 
-                    {!isSelectedSaved && (
-                        <button
-                            type="button"
-                            onClick={handleAddCity}
-                            aria-label={`Add ${selectedCity.name} to the list`}
-                            className={FLOATING_BUTTON_CLASS}
-                        >
-                            <Plus size={20} weight="bold" />
-                        </button>
-                    )}
+                        {!isSelectedSaved && (
+                            <button
+                                type="button"
+                                onClick={handleAddCity}
+                                aria-label={`Add ${selectedCity.name} to the list`}
+                                className={FLOATING_BUTTON_CLASS}
+                            >
+                                <Plus size={20} weight="bold" />
+                            </button>
+                        )}
+                    </div>
+
+                    {hydrated && <WeatherDashboard city={displayedCity} />}
                 </div>
-
-                {hydrated && <WeatherDashboard city={displayedCity} />}
             </div>
         </div>
     );

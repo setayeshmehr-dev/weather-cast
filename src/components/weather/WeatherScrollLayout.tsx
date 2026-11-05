@@ -9,7 +9,7 @@ import {
     HERO_STOP,
     getHeroProgress,
 } from "@/lib/heroScroll";
-import { createSmoothScroll } from "@/lib/smoothScroll";
+import { TOUCH_SCROLL, createSmoothScroll } from "@/lib/smoothScroll";
 
 // Content sliding under a card header fades over this distance (px).
 const HEADER_FADE = 12;
@@ -302,9 +302,11 @@ export default function WeatherScrollLayout({
                 {hero}
             </div>
 
-            <main
+                        <main
                 ref={scrollerRef}
-                className="@container absolute inset-0 overflow-y-auto px-10 pb-6"
+                className={`@container absolute inset-0 overflow-y-auto overscroll-contain px-10 pb-[max(1.5rem,env(safe-area-inset-bottom))] ${
+                    TOUCH_SCROLL ? "touch-pan-x touch-pinch-zoom" : ""
+                }`}
                 style={{ paddingTop: HERO_FULL_HEIGHT + HERO_GAP }}
             >
                 {children}

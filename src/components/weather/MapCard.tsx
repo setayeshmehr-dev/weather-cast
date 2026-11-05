@@ -130,6 +130,8 @@ export default function MapCard({ city, current, className }: MapCardProps) {
             forceNoAttributionControl: true,
             navigationControl: false,
             geolocateControl: false,
+            // On touch screens one finger scrolls the page and two fingers move the map.
+            cooperativeGestures: window.matchMedia("(pointer: coarse)").matches,
         });
 
         mapRef.current = map;

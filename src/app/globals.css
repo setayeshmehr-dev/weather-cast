@@ -64,3 +64,27 @@ body {
 .maplibregl-ctrl-attrib a {
     color: #d1d1d6;
 }
+
+/* Phones: no gray flash when tapping, no zoom of the text size on rotate,
+   and no bounce / pull-to-refresh of the whole page. */
+html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    overscroll-behavior: none;
+}
+
+/* No double-tap zoom delay on buttons and cards. */
+button,
+[role="button"],
+a {
+    touch-action: manipulation;
+}
+
+/* iOS zooms into a field whose text is smaller than 16px. */
+@media (pointer: coarse) {
+    input,
+    select,
+    textarea {
+        font-size: max(16px, 1em);
+    }
+}
