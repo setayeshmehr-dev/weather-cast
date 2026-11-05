@@ -13,7 +13,7 @@ import ScrollArrow from "@/components/weather/ScrollArrow";
 import { useHorizontalScroll } from "@/hooks/useHorizontalScroll";
 
 // The arrows stay this long after the pointer leaves, so a short detour does not hide them.
-const HIDE_DELAY_MS = 450;
+const HIDE_DELAY_MS = 2000;
 
 function formatTime(time: string): string {
     return time.slice(11, 16);
