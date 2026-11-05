@@ -248,11 +248,33 @@ export default function MapCard({ city, current, className }: MapCardProps) {
         (layer) => layer.id === activeLayer,
     )!;
 
+    const menuWrapperRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        if (!menuOpen) return;
+
+        const onPointerDown = (event: PointerEvent) => {
+            if (!menuWrapperRef.current?.contains(event.target as Node)) {
+                setMenuOpen(false);
+            }
+        };
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") setMenuOpen(false);
+        };
+
+        document.addEventListener("pointerdown", onPointerDown);
+        document.addEventListener("keydown", onKeyDown);
+        return () => {
+            document.removeEventListener("pointerdown", onPointerDown);
+            document.removeEventListener("keydown", onKeyDown);
+        };
+    }, [menuOpen]);
+
     return (
         <WeatherCard
             skeleton="none"
             title={
-                <div className="flex w-full items-center justify-between gap-3">
+                <div ref={menuWrapperRef} className="flex w-full items-center justify-between gap-3">
                     <span>WEATHER MAP</span>
 
                     <div className="relative">
@@ -261,13 +283,20 @@ export default function MapCard({ city, current, className }: MapCardProps) {
                             onClick={() => setMenuOpen((open) => !open)}
                             aria-label="Select weather map layer"
                             aria-expanded={menuOpen}
-                            className="flex items-center gap-2 rounded-lg border border-black/10 bg-white/70 px-2.5 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10"
+                            className="group relative flex items-center gap-2 overflow-hidden rounded-full border border-white/60 bg-white/40 px-3.5 py-1.5 text-xs font-semibold text-gray-700 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7),0_4px_16px_rgba(31,38,135,0.12)] backdrop-blur-xl transition-all duration-300 hover:bg-white/60 hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.9),0_6px_24px_rgba(31,38,135,0.18)] active:scale-95 dark:border-white/10 dark:bg-white/10 dark:text-gray-100 dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.15),0_4px_16px_rgba(0,0,0,0.45)] dark:hover:bg-white/20"
                         >
-                            <Stack size={16} weight="regular" />
+                            {/* reflection on the top edge */}
+                            <span className="pointer-events-none absolute inset-x-3 top-0 h-px bg-linear-to-r from-transparent via-white/90 to-transparent dark:via-white/40" />
+
+                            <Stack
+                                size={16}
+                                weight="regular"
+                                className="text-gray-500 transition-transform duration-300 group-hover:scale-110 dark:text-sky-300"
+                            />
                             <span>Layers</span>
                             <CaretDown
                                 size={13}
-                                className={`transition-transform ${
+                                className={`transition-transform duration-300 ${
                                     menuOpen ? "rotate-180" : ""
                                 }`}
                             />
@@ -276,8 +305,14 @@ export default function MapCard({ city, current, className }: MapCardProps) {
                         {menuOpen && (
                             <div
                                 role="menu"
-                                className="absolute right-0 top-full z-20 mt-2 min-w-48 rounded-xl border border-black/10 bg-white p-1.5 shadow-xl dark:border-white/10 dark:bg-[#17171b]"
+                                className={`${styles.menuPanel} absolute right-0 top-full z-20 mt-3 min-w-56 overflow-hidden rounded-2xl border border-white/60 bg-white/50 p-1.5 shadow-[0_12px_40px_rgba(31,38,135,0.16),inset_0_1px_0_rgba(255,255,255,0.6)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#17171b]/60 dark:shadow-[0_12px_40px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.08)]`}
                             >
+                                {/* ambient light bubbles inside the glass */}
+                                <div className="pointer-events-none absolute -right-8 -top-10 size-28 rounded-full bg-sky-400/20 blur-2xl dark:bg-sky-400/20" />
+                                <div className="pointer-events-none absolute -bottom-10 -left-8 size-24 rounded-full bg-cyan-300/20 blur-2xl dark:bg-cyan-400/10" />
+                                {/* top edge reflection */}
+                                <div className="pointer-events-none absolute inset-x-4 top-0 h-px bg-linear-to-r from-transparent via-white/90 to-transparent dark:via-white/25" />
+
                                 {WEATHER_LAYERS.map((layer) => {
                                     const Icon = layer.icon;
                                     const isActive = activeLayer === layer.id;
@@ -292,21 +327,26 @@ export default function MapCard({ city, current, className }: MapCardProps) {
                                                 setActiveLayer(layer.id);
                                                 setMenuOpen(false);
                                             }}
-                                            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${
+                                            className={`group/item relative z-10 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all duration-200 ${
                                                 isActive
-                                                    ? "bg-black/5 text-gray-900 dark:bg-white/10 dark:text-white"
-                                                    : "text-gray-600 hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/5"
+                                                    ? "bg-white/60 text-gray-900 shadow-[inset_0_1px_1px_rgba(255,255,255,0.9),0_2px_10px_rgba(31,38,135,0.12)] dark:bg-white/10 dark:text-white dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.12),0_2px_10px_rgba(0,0,0,0.4)]"
+                                                    : "text-gray-700 hover:bg-white/40 hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.8)] dark:text-gray-300 dark:hover:bg-white/5"
                                             }`}
                                         >
-                                            <Icon size={19} weight="regular" />
-                                            <span className="flex-1">
-                                                {layer.label}
-                                            </span>
+                                            <Icon
+                                                size={19}
+                                                weight="regular"
+                                                className={
+                                                    isActive
+                                                        ? "text-sky-600 dark:text-sky-300"
+                                                        : "text-gray-400 transition-colors group-hover/item:text-sky-500 dark:text-gray-500 dark:group-hover/item:text-sky-300"
+                                                }
+                                            />
+                                            <span className="flex-1">{layer.label}</span>
                                             {isActive && (
-                                                <Check
-                                                    size={16}
-                                                    weight="bold"
-                                                />
+                                                <span className="flex size-6 items-center justify-center rounded-full bg-sky-500/20 text-sky-600 shadow-[inset_0_1px_1px_rgba(255,255,255,0.6)] dark:text-sky-300">
+                                                    <Check size={14} weight="bold" />
+                                                </span>
                                             )}
                                         </button>
                                     );
