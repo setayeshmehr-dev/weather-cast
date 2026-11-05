@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { PointerEvent, ReactNode } from "react";
 
 import CardSkeleton from "@/components/weather/CardSkeleton";
 import type { CardSkeletonVariant } from "@/components/weather/CardSkeleton";
@@ -17,6 +17,10 @@ type WeatherCardProps = {
     skeleton?: CardSkeletonVariant | "none";
     className?: string;
     bodyClassName?: string;
+    /** Drawn over the card, outside its clipped body (for example scroll arrows). */
+    overlay?: ReactNode;
+    onPointerEnter?: (event: PointerEvent<HTMLElement>) => void;
+    onPointerLeave?: (event: PointerEvent<HTMLElement>) => void;
     children?: ReactNode;
 };
 
@@ -34,6 +38,9 @@ export default function WeatherCard({
     skeleton = "stat",
     className = "",
     bodyClassName = "",
+    overlay,
+    onPointerEnter,
+    onPointerLeave,
     children,
 }: WeatherCardProps) {
     const dashboardLoading = useWeatherLoading();
@@ -46,7 +53,9 @@ export default function WeatherCard({
             data-weather-card=""
             aria-label={typeof title === "string" ? title : "Weather card"}
             aria-busy={showSkeleton}
-            className={`relative isolate flex min-h-0 min-w-0 flex-col p-(--card-pad) text-white [--card-pad:12px] @min-[624px]:[--card-pad:10px] ${className}`}
+            onPointerEnter={onPointerEnter}
+            onPointerLeave={onPointerLeave}
+            className={`group/card relative isolate flex min-h-0 min-w-0 flex-col p-(--card-pad) text-white [--card-pad:12px] @min-[624px]:[--card-pad:10px] ${className}`}
         >
             <div
                 data-card-frame=""
@@ -66,7 +75,7 @@ export default function WeatherCard({
 
             <div
                 data-card-body=""
-                className={`pointer-events-auto @container min-h-0 flex-1 ${bodySpacing} ${bodyClassName}`}
+                className={`pointer-events-auto @container min-h-0 flex-1 overflow-hidden ${bodySpacing} ${bodyClassName}`}
             >
                 {showSkeleton && <CardSkeleton variant={skeleton} />}
 
@@ -74,6 +83,12 @@ export default function WeatherCard({
                     {children}
                 </div>
             </div>
+
+            {overlay && (
+                <div className="contents group-data-collapsed/card:hidden">
+                    {overlay}
+                </div>
+            )}
         </section>
     );
 }

@@ -6,6 +6,14 @@ import WeatherIcon from "@/components/weather/WeatherIcon";
 import type { CurrentWeather, ForecastItem } from "@/hooks/useWeather";
 import { getWeatherIcon } from "@/hooks/useWeather";
 import { useFormat } from "@/hooks/useFormat";
+import { useEffect, useRef, useState } from "react";
+import type { PointerEvent } from "react";
+
+import ScrollArrow from "@/components/weather/ScrollArrow";
+import { useHorizontalScroll } from "@/hooks/useHorizontalScroll";
+
+// The arrows stay this long after the pointer leaves, so a short detour does not hide them.
+const HIDE_DELAY_MS = 450;
 
 function formatTime(time: string): string {
     return time.slice(11, 16);
@@ -27,8 +35,55 @@ export default function HourlyForecast({
 
     const fmt = useFormat();
 
+        const { scrollerRef, edges, scrollByPage } =
+        useHorizontalScroll<HTMLDivElement>();
+
+    const [hovered, setHovered] = useState(false);
+    const hideTimer = useRef<number | undefined>(undefined);
+
+    useEffect(() => () => window.clearTimeout(hideTimer.current), []);
+
+    // Touch screens scroll with the finger: no arrows there.
+    const handlePointerEnter = (event: PointerEvent<HTMLElement>) => {
+        if (event.pointerType === "touch") return;
+
+        window.clearTimeout(hideTimer.current);
+        setHovered(true);
+    };
+
+    const handlePointerLeave = (event: PointerEvent<HTMLElement>) => {
+        if (event.pointerType === "touch") return;
+
+        window.clearTimeout(hideTimer.current);
+        hideTimer.current = window.setTimeout(
+            () => setHovered(false),
+            HIDE_DELAY_MS
+        );
+    };
+
     return (
-        <WeatherCard skeleton="strip" title="HOURLY FORECAST" divided>
+                <WeatherCard
+            title="HOURLY FORECAST"
+            divided
+            onPointerEnter={handlePointerEnter}
+            onPointerLeave={handlePointerLeave}
+            overlay={
+                <>
+                    <ScrollArrow
+                        side="left"
+                        visible={hovered && edges.left}
+                        top={edges.center}
+                        onClick={() => scrollByPage(-1)}
+                    />
+                    <ScrollArrow
+                        side="right"
+                        visible={hovered && edges.right}
+                        top={edges.center}
+                        onClick={() => scrollByPage(1)}
+                    />
+                </>
+            }
+        >
             {loading && (
                 <p className="py-4 text-sm text-white/70">
                     Loading forecast...
@@ -42,7 +97,7 @@ export default function HourlyForecast({
             )}
 
             {!loading && !error && (
-                <div className="scrollbar-hide flex snap-x snap-mandatory gap-1 overflow-x-auto scroll-smooth pb-2">
+                <div ref={scrollerRef} className="scrollbar-hide flex snap-x snap-mandatory gap-1 overflow-x-auto pb-2">
                     {current && (
                         <div className="flex w-14 shrink-0 snap-start flex-col items-center gap-3">
                             <span className="whitespace-nowrap text-sm text-white/80">
