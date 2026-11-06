@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Trash } from "@phosphor-icons/react";
@@ -13,7 +14,6 @@ import { getWeatherVideoName } from "@/lib/weatherVideo";
 
 const PLACEHOLDER_BACKGROUND =
     "linear-gradient(160deg, #3b4a63 0%, #566580 100%)";
-
 
 function localTime(summary: CitySummary, now: number | null): string {
     if (now === null) return summary.time.slice(11, 16);
@@ -40,6 +40,7 @@ type CityCardProps = {
     onSelect: () => void;
     onRemove: () => void;
     suppressClick?: boolean;
+    compact?: boolean;
 };
 
 export default function CityCard({
@@ -51,6 +52,7 @@ export default function CityCard({
     onSelect,
     onRemove,
     suppressClick = false,
+    compact = false,
 }: CityCardProps) {
     const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
     const menuRef = useRef<HTMLButtonElement | null>(null);
@@ -64,27 +66,14 @@ export default function CityCard({
             if (event.key === "Escape") close();
         };
 
-        /*
-         * Lock body scroll while the Delete menu is open. The overlay
-         * catches all pointer events (so the sidebar's own scrollable area
-         * is also blocked — wheel/touch events land on the overlay, not on
-         * the scroll container below). Setting `overflow: hidden` on body
-         * is the belt-and-suspenders for page-level scroll.
-         *
-         * We snapshot the original inline style and restore it on cleanup
-         * so we don't clobber any other inline `overflow` set elsewhere.
-         */
         const originalOverflow = document.body.style.overflow;
         document.body.style.overflow = "hidden";
 
-        // Defer attaching the keydown/blur listeners by one tick so the
-        // same right-click gesture that opened the menu doesn't immediately
-        // dismiss it via a stray event.
         const id = window.setTimeout(() => {
             document.addEventListener("keydown", handleKeyDown);
             window.addEventListener("blur", close);
         }, 0);
-        
+
         return () => {
             window.clearTimeout(id);
             document.removeEventListener("keydown", handleKeyDown);
@@ -95,6 +84,7 @@ export default function CityCard({
 
     const handleContextMenu = (event: MouseEvent<HTMLButtonElement>) => {
         if (!canRemove) return;
+
         event.preventDefault();
         setMenu({ x: event.clientX, y: event.clientY });
     };
@@ -103,9 +93,11 @@ export default function CityCard({
         setMenu(null);
         onRemove();
     };
+
     const fmt = useFormat();
+
     return (
-        <div className="relative">
+        <div className="relative h-full">
             <button
                 type="button"
                 onClick={() => {
@@ -115,7 +107,9 @@ export default function CityCard({
                 onContextMenu={canRemove ? handleContextMenu : undefined}
                 aria-current={selected ? "true" : undefined}
                 aria-label={`${city.name}${summary ? `, ${summary.condition}` : ""}`}
-                className={`relative isolate flex h-24 w-full flex-col justify-between overflow-hidden rounded-2xl p-3 text-left text-white ${
+                className={`relative isolate flex ${
+                    compact ? "h-full" : "h-24"
+                } w-full flex-col justify-between overflow-hidden rounded-2xl p-3 text-left text-white ${
                     selected ? "ring-3 ring-white/30" : ""
                 }`}
                 style={{
@@ -140,7 +134,11 @@ export default function CityCard({
 
                 <div className="relative z-20 flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                        <p className="truncate text-lg leading-tight font-semibold">
+                        <p
+                            className={`truncate leading-tight font-semibold ${
+                                compact ? "text-base" : "text-lg"
+                            }`}
+                        >
                             {city.name}
                         </p>
 
@@ -154,7 +152,11 @@ export default function CityCard({
                     </div>
 
                     {summary ? (
-                        <p className="text-4xl leading-none font-light">
+                        <p
+                            className={`leading-none font-light ${
+                                compact ? "text-3xl" : "text-4xl"
+                            }`}
+                        >
                             {fmt.temperature(summary.temperature)}°
                         </p>
                     ) : (
@@ -165,7 +167,9 @@ export default function CityCard({
                 <div className="relative z-20 flex items-end justify-between gap-2 text-xs">
                     {summary ? (
                         <>
-                            <span className="truncate">{summary.condition}</span>
+                            <span className="truncate">
+                                {summary.condition}
+                            </span>
                             <span className="shrink-0">
                                 {`H:${fmt.temperature(summary.max)}° L:${fmt.temperature(summary.min)}°`}
                             </span>
@@ -179,29 +183,6 @@ export default function CityCard({
                 </div>
             </button>
 
-            {/*
-             * Right-click "Delete" menu with modal-style behavior.
-             *
-             * Two layers are rendered into a portal on document.body:
-             *
-             *   1. An invisible overlay (`fixed inset-0 z-40`) that catches
-             *      ALL pointer events anywhere on the page — left-click,
-             *      right-click, touch, wheel — until the menu is dismissed.
-             *      `touch-none` (touch-action: none) prevents touch scroll
-             *      from passing through to the sidebar's scrollable area.
-             *      `onContextMenu` is prevented so the browser's native
-             *      right-click menu doesn't pop up on top of our Delete button.
-             *
-             *   2. The Delete button itself (`fixed z-50`), one z-layer
-             *      above the overlay. Pointer events on the button call
-             *      `handleDelete`; pointer events anywhere else land on the
-             *      overlay and dismiss the menu.
-             *
-             * Body scroll is also locked via `document.body.style.overflow
-             * = "hidden"` in the useEffect above — that catches any
-             * keyboard-driven scroll (Page Down, Space) that the overlay
-             * wouldn't intercept.
-             */}
             {menu &&
                 createPortal(
                     <>

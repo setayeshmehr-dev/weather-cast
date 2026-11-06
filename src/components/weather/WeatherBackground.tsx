@@ -102,8 +102,8 @@ export default function WeatherBackground({
                                     key={option.key}
                                     value={option.key}
                                     className={`
-                                        bg-[#0f0f14]/70
-                                        supports-backdrop-filter:bg-[#0f0f14]/55
+                                        bg-[#0f0f14]/30
+                                        supports-backdrop-filter:bg-[#0f0f14]/25
                                         supports-backdrop-filter:backdrop-blur-2xl
                                         supports-backdrop-filter:backdrop-saturate-[1.8]
                                     `}
@@ -124,16 +124,16 @@ export default function WeatherBackground({
                             className="rounded-md bg-white/10 p-2 outline-none"
                         >
                             <option value="day" className={`
-                                        bg-[#0f0f14]/70
-                                        supports-backdrop-filter:bg-[#0f0f14]/55
+                                        bg-[#0f0f14]/30
+                                        supports-backdrop-filter:bg-[#0f0f14]/25
                                         supports-backdrop-filter:backdrop-blur-2xl
                                         supports-backdrop-filter:backdrop-saturate-[1.8]
                                     `}>
                                 Day
                             </option>
                             <option value="night" className={`
-                                        bg-[#0f0f14]/70
-                                        supports-backdrop-filter:bg-[#0f0f14]/55
+                                        bg-[#0f0f14]/30
+                                        supports-backdrop-filter:bg-[#0f0f14]/25
                                         supports-backdrop-filter:backdrop-blur-2xl
                                         supports-backdrop-filter:backdrop-saturate-[1.8]
                                     `}>

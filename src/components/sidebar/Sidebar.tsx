@@ -1,11 +1,20 @@
+
 "use client";
 
-import { MagnifyingGlass, SidebarSimple, XCircle } from "@phosphor-icons/react";
+import {
+    Check,
+    MagnifyingGlass,
+    PencilSimple,
+    SidebarSimple,
+    XCircle,
+} from "@phosphor-icons/react";
 import { Fragment, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 
+
 import CityCard from "@/components/sidebar/CityCard";
+import CityEditList from "@/components/sidebar/CityEditList";
 import { useCitySearch } from "@/hooks/useCitySearch";
 import { useCitySummaries } from "@/hooks/useCitySummaries";
 import { useDragReorder } from "@/hooks/useDragReorder";
@@ -24,6 +33,7 @@ type SuggestionLabelProps = {
 
 function SuggestionLabel({ label, query }: SuggestionLabelProps) {
     const typed = query.trim();
+
     const matches =
         stripDiacritics(label.slice(0, typed.length)).toLowerCase() ===
         stripDiacritics(typed).toLowerCase();
@@ -60,7 +70,6 @@ type SidebarProps = {
     onQueryChange: (query: string) => void;
     onSelectCity: (city: City) => void;
     onRemoveCity: (id: string) => void;
-    /** Called when the user finishes a drag-and-drop reorder. */
     onReorderCities: (from: number, to: number) => void;
     onClose: () => void;
 };
@@ -76,11 +85,11 @@ export default function Sidebar({
     onClose,
 }: SidebarProps) {
     const [focused, setFocused] = useState(false);
+    const [editing, setEditing] = useState(false);
 
     const summaries = useCitySummaries(cities);
     const now = useNow();
     const search = useCitySearch(query);
-
     const drag = useDragReorder(cities, onReorderCities);
 
     const trimmed = query.trim();
@@ -97,29 +106,32 @@ export default function Sidebar({
         }
     };
 
-    // While dragging, the dragged card is filtered out of the rendered list
-    // (no dimmed placeholder at its original position). An empty spacer <li>
-    // with the same height as the card is inserted at `dropIndex` so the
-    // other cards naturally shift to make room — iOS-Springboard style.
     const draggingId = drag.draggingId;
     const dropIndex = drag.dropIndex ?? -1;
+
     const filteredCities = draggingId
-        ? cities.filter((c) => c.id !== draggingId)
+        ? cities.filter((city) => city.id !== draggingId)
         : cities;
 
     const renderContent = () => {
         if (!searching) {
+            if (editing) {
+                return (
+                    <CityEditList
+                        cities={cities}
+                        selectedCity={selectedCity}
+                        summaries={summaries}
+                        now={now}
+                        onMove={onReorderCities}
+                        onRemove={onRemoveCity}
+                    />
+                );
+            }
+
             return (
                 <ul className="flex flex-col gap-5">
                     {filteredCities.map((city, index) => (
                         <Fragment key={city.id}>
-                            {/*
-                             * Spacer — an empty <li> with the same height as
-                             * a card. It has no `data-draggable-id`, so the
-                             * hook's `computeDropIndex` ignores it (correctly).
-                             * Its sole job is to push the cards below it
-                             * downward via flexbox reflow.
-                             */}
                             {index === dropIndex && (
                                 <li
                                     className="h-24 list-none"
@@ -151,24 +163,28 @@ export default function Sidebar({
                         </Fragment>
                     ))}
 
-                    {/*
-                     * Spacer at the very end — when the cursor is below all
-                     * cards, dropIndex === filteredCities.length, and the
-                     * spacer appears after the last card.
-                     */}
                     {dropIndex === filteredCities.length && dropIndex >= 0 && (
-                        <li className="h-24 list-none" aria-hidden="true" />
+                        <li
+                            className="h-24 list-none"
+                            aria-hidden="true"
+                        />
                     )}
                 </ul>
             );
         }
 
         if (trimmed.length < 2) {
-            return <Message text="Type at least two letters to search for a city." />;
+            return (
+                <Message text="Type at least two letters to search for a city." />
+            );
         }
 
         if (search.loading) {
-            return <p className="px-2 py-3 text-sm text-white/60">Searching…</p>;
+            return (
+                <p className="px-2 py-3 text-sm text-white/60">
+                    Searching…
+                </p>
+            );
         }
 
         if (search.error) {
@@ -196,7 +212,7 @@ export default function Sidebar({
                         <button
                             type="button"
                             onClick={() => onSelectCity(city)}
-                            className={`w-full truncate rounded-lg px-3 py-2 mt-2 text-left text-sm ${
+                            className={`mt-2 w-full truncate rounded-lg px-3 py-2 text-left text-sm ${
                                 city.id === selectedCity.id
                                     ? "bg-white/15"
                                     : "hover:bg-white/10"
@@ -215,12 +231,30 @@ export default function Sidebar({
 
     const draggedCity =
         drag.draggingId !== null
-            ? cities.find((c) => c.id === drag.draggingId) ?? null
+            ? cities.find((city) => city.id === drag.draggingId) ?? null
             : null;
 
     return (
         <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-black/25 text-white backdrop-blur-xl">
-            <div className="flex h-11 shrink-0 items-center justify-end px-2">
+            <div className="flex h-11 shrink-0 items-center justify-end gap-1 px-2">
+                <button
+                    type="button"
+                    onClick={() => setEditing((value) => !value)}
+                    aria-label={editing ? "Done editing" : "Edit list"}
+                    aria-pressed={editing}
+                    className={`flex size-8 items-center justify-center rounded-lg hover:bg-white/10 ${
+                        editing
+                            ? "bg-white/15 text-white"
+                            : "text-white/80"
+                    }`}
+                >
+                    {editing ? (
+                        <Check size={20} weight="bold" />
+                    ) : (
+                        <PencilSimple size={20} />
+                    )}
+                </button>
+
                 <button
                     type="button"
                     onClick={onClose}
@@ -233,12 +267,17 @@ export default function Sidebar({
 
             <div className="shrink-0 px-2 pb-2">
                 <div className="flex h-9 items-center gap-2 rounded-xl bg-black/30 px-3 text-sm focus-within:ring-2 focus-within:ring-blue-500/80">
-                    <MagnifyingGlass size={16} className="shrink-0 text-white/60" />
+                    <MagnifyingGlass
+                        size={16}
+                        className="shrink-0 text-white/60"
+                    />
 
                     <input
                         type="text"
                         value={query}
-                        onChange={(event) => onQueryChange(event.target.value)}
+                        onChange={(event) =>
+                            onQueryChange(event.target.value)
+                        }
                         onFocus={() => setFocused(true)}
                         onBlur={() => setFocused(false)}
                         onKeyDown={handleKeyDown}
@@ -267,34 +306,25 @@ export default function Sidebar({
                 {renderContent()}
             </div>
 
-            {/*
-             * Floating clone of the dragged card. Rendered in a portal on
-             * document.body so it isn't clipped by the sidebar's
-             * `overflow-hidden` or constrained to the sidebar's scroll area.
-             *
-             * It follows the cursor using the offset captured at drag start
-             * (so the cursor stays at the same spot on the card the whole
-             * time), and is enlarged by 5% with a strong drop shadow for the
-             * "lifted off the surface" look iOS Springboard uses.
-             *
-             * `pointer-events-none` is critical — it lets pointermove events
-             * pass through the clone to the cards beneath, so the dropIndex
-             * stays accurate.
-             */}
             {drag.draggingId !== null &&
                 drag.pointerPosition !== null &&
                 drag.cardRect !== null &&
                 draggedCity &&
                 createPortal(
                     <div
-                        className="fixed z-50 pointer-events-none"
+                        className="pointer-events-none fixed z-50"
                         style={{
-                            left: drag.pointerPosition.x - drag.pointerOffset.x,
-                            top: drag.pointerPosition.y - drag.pointerOffset.y,
+                            left:
+                                drag.pointerPosition.x -
+                                drag.pointerOffset.x,
+                            top:
+                                drag.pointerPosition.y -
+                                drag.pointerOffset.y,
                             width: drag.cardRect.width,
                             transform: "scale(1.05)",
                             transformOrigin: "top left",
-                            filter: "drop-shadow(0 12px 24px rgba(0, 0, 0, 0.45))",
+                            filter:
+                                "drop-shadow(0 12px 24px rgba(0, 0, 0, 0.45))",
                             opacity: 0.95,
                         }}
                     >

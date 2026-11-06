@@ -8,6 +8,24 @@ import ReportIssueDialog from "@/components/menu/ReportIssueDialog";
 import UnitsDialog from "@/components/menu/UnitsDialog";
 import type { City } from "@/lib/cities";
 
+const GLASS_ROUND_ICON =
+    "group relative flex size-10 items-center justify-center overflow-hidden rounded-full " +
+    "text-white/70 " +
+    "backdrop-blur-md backdrop-saturate-150 backdrop-brightness-105 " +
+    "shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_4px_16px_rgba(17,17,26,0.12)] " +
+    "transition-all duration-200 hover:scale-105 active:scale-90 " +
+    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400 " +
+    // frosted tint + diagonal sheen in one gradient (::before)
+    "before:pointer-events-none before:absolute before:inset-0 before:rounded-full " +
+    "before:bg-[linear-gradient(135deg,rgba(255,255,255,0.60),rgba(255,255,255,0.1)_38%,rgba(255,255,255,0.1)_62%,rgba(255,255,255,0.3))] " +
+    "hover:before:bg-[linear-gradient(135deg,rgba(255,255,255,0.42),rgba(255,255,255,0.14)_38%,rgba(255,255,255,0.14)_62%,rgba(255,255,255,0.26))] " +
+    // gradient rim (::after)
+    "after:pointer-events-none after:absolute after:inset-0 after:rounded-full after:p-px " +
+    "after:bg-[linear-gradient(150deg,rgba(255,255,255,0.7),rgba(255,255,255,0.12)_45%,rgba(255,255,255,0.1)_60%,rgba(255,255,255,0.45))] " +
+    "after:[-webkit-mask:linear-gradient(#000_0_0)_content-box,linear-gradient(#000_0_0)] " +
+    "after:[-webkit-mask-composite:xor] " +
+    "after:[mask:linear-gradient(#000_0_0)_content-box_exclude,linear-gradient(#000_0_0)]";
+
 const BUTTON_CLASS =
     "flex size-11 items-center justify-center rounded-full border border-white/20 bg-white/15 text-white backdrop-blur-md transition-colors hover:bg-white/25 md:size-10";
 
@@ -88,17 +106,17 @@ export default function TopRightControls({ city, children }: TopRightControlsPro
                         aria-haspopup="menu"
                         aria-expanded={menuOpen}
                         onClick={() => setMenuOpen((value) => !value)}
-                        className={BUTTON_CLASS}
+                        className={GLASS_ROUND_ICON}
                     >
-                        <DotsThreeVertical size={22} weight="bold" />
+                        <DotsThreeVertical size={28} weight="bold" />
                     </button>
 
                     {menuOpen && (
                         <div
                             role="menu"
                             className={`absolute top-full right-0 z-40 g-1 mt-2 w-64 rounded-3xl border border-white/10 p-1.5 text-white shadow-2xl backdrop-blur-2xl
-                                bg-[#0f0f14]/70
-                                supports-backdrop-filter:bg-[#0f0f14]/55
+                                bg-[#0f0f14]/30
+                                supports-backdrop-filter:bg-[#0f0f14]/25
                                 supports-backdrop-filter:backdrop-blur-2xl
                                 supports-backdrop-filter:backdrop-saturate-[1.8]
                             `}

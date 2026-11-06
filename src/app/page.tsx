@@ -131,7 +131,7 @@ export default function Home() {
                                 aria-label="Show sidebar"
                                 className={GLASS_ROUND_ICON}
                             >
-                                <SidebarSimple size={20} />
+                                <SidebarSimple size={24} />
                             </button>
                         )}
 
