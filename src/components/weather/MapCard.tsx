@@ -257,23 +257,53 @@ export default function MapCard({ city, current, className }: MapCardProps) {
 
     const menuWrapperRef = useRef<HTMLDivElement | null>(null);
 
-    useEffect(() => {
+
+     useEffect(() => {
         if (!menuOpen) return;
+
+        const closeMenu = () => setMenuOpen(false);
 
         const onPointerDown = (event: PointerEvent) => {
             if (!menuWrapperRef.current?.contains(event.target as Node)) {
-                setMenuOpen(false);
+                closeMenu();
             }
         };
         const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key === "Escape") setMenuOpen(false);
+            if (event.key === "Escape") closeMenu();
         };
+
+        // While the menu is open the page must not scroll: wheel and touch
+        // are stopped at the window, in the capture phase, before the smooth
+        // scroller can see them.
+        const blockScroll = (event: Event) => {
+            event.preventDefault();
+            event.stopPropagation();
+        };
+
+        // If the view moves anyway — a momentum that was already running, the
+        // scrollbar — the menu closes itself. Every change of scrollTop fires
+        // a scroll event: it does not bubble, but it passes the window in the
+        // capture phase.
+        const onScroll = () => closeMenu();
 
         document.addEventListener("pointerdown", onPointerDown);
         document.addEventListener("keydown", onKeyDown);
+        window.addEventListener("wheel", blockScroll, {
+            capture: true,
+            passive: false,
+        });
+        window.addEventListener("touchmove", blockScroll, {
+            capture: true,
+            passive: false,
+        });
+        window.addEventListener("scroll", onScroll, true);
+
         return () => {
             document.removeEventListener("pointerdown", onPointerDown);
             document.removeEventListener("keydown", onKeyDown);
+            window.removeEventListener("wheel", blockScroll, true);
+            window.removeEventListener("touchmove", blockScroll, true);
+            window.removeEventListener("scroll", onScroll, true);
         };
     }, [menuOpen]);
 
