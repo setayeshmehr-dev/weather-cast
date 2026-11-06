@@ -75,7 +75,7 @@ export default function WeatherCard({
 
             <div
                 data-card-body=""
-                className={`pointer-events-auto @container min-h-0 flex-1 overflow-hidden ${bodySpacing} ${bodyClassName}`}
+                className={`pointer-events-auto @container min-h-0 flex-1 overflow-visible ${bodySpacing} ${bodyClassName}`}
             >
                 {showSkeleton && <CardSkeleton variant={skeleton} />}
 
