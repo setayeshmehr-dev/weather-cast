@@ -122,10 +122,11 @@ export default function MapCard({ city, current, className }: MapCardProps) {
 
         const map = new Map({
             container,
-            style: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+            style: "https://api.maptiler.com/maps/dataviz-v4-light/style.json",
             center: centerRef.current,
             zoom: DEFAULT_ZOOM,
             dragRotate: false,
+            halo: false,
             pitchWithRotate: false,
             doubleClickZoom: true,
             forceNoAttributionControl: true,
@@ -192,7 +193,10 @@ export default function MapCard({ city, current, className }: MapCardProps) {
             if (cancelled) return;
 
             if (activeLayerRef.current) {
-                map.removeLayer(activeLayerRef.current);
+                if (map.getLayer(activeLayerRef.current)) {
+                    map.removeLayer(activeLayerRef.current);
+                }
+
                 activeLayerRef.current = null;
             }
 
