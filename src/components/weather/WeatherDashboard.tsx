@@ -48,7 +48,7 @@ const mapClassName =
 const airQualityClassName =
     "col-span-2 @min-[624px]:col-start-3 @min-[624px]:row-start-3 @min-[944px]:row-start-1";
 const windClassName =
-    "col-span-2 @min-[624px]:col-start-3 @min-[624px]:row-start-4 @min-[624px]:-my-[calc(var(--cell)_*_0.08)] @min-[944px]:row-start-2";
+   "col-span-2 @min-[624px]:col-start-3 @min-[624px]:row-start-4 @min-[944px]:row-start-2";
 const moonClassName =
     "col-span-2 @min-[624px]:col-start-1 @min-[624px]:row-start-4";
 const uvIndexClassName =

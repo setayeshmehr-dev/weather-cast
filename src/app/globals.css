@@ -1,6 +1,7 @@
 @layer theme, base, mui, components, utilities;
 @import "tailwindcss";
 
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -130,3 +131,5 @@ a {
         background: transparent;
     }
 }
+
+

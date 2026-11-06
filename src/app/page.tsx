@@ -14,6 +14,24 @@ import type { City } from "@/lib/cities";
 
 const MOBILE_QUERY = "(max-width: 767px)";
 
+const GLASS_ROUND_ICON =
+    "group relative flex size-10 items-center justify-center overflow-hidden rounded-full " +
+    "text-white/70 " +
+    "backdrop-blur-md backdrop-saturate-150 backdrop-brightness-105 " +
+    "shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_4px_16px_rgba(17,17,26,0.12)] " +
+    "transition-all duration-200 hover:scale-105 active:scale-90 " +
+    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400 " +
+    // frosted tint + diagonal sheen in one gradient (::before)
+    "before:pointer-events-none before:absolute before:inset-0 before:rounded-full " +
+    "before:bg-[linear-gradient(135deg,rgba(255,255,255,0.60),rgba(255,255,255,0.1)_38%,rgba(255,255,255,0.1)_62%,rgba(255,255,255,0.3))] " +
+    "hover:before:bg-[linear-gradient(135deg,rgba(255,255,255,0.42),rgba(255,255,255,0.14)_38%,rgba(255,255,255,0.14)_62%,rgba(255,255,255,0.26))] " +
+    // gradient rim (::after)
+    "after:pointer-events-none after:absolute after:inset-0 after:rounded-full after:p-px " +
+    "after:bg-[linear-gradient(150deg,rgba(255,255,255,0.7),rgba(255,255,255,0.12)_45%,rgba(255,255,255,0.1)_60%,rgba(255,255,255,0.45))] " +
+    "after:[-webkit-mask:linear-gradient(#000_0_0)_content-box,linear-gradient(#000_0_0)] " +
+    "after:[-webkit-mask-composite:xor] " +
+    "after:[mask:linear-gradient(#000_0_0)_content-box_exclude,linear-gradient(#000_0_0)]";
+
 const FLOATING_BUTTON_CLASS =
     "flex size-11 items-center justify-center rounded-full border border-white/20 bg-white/15 text-white backdrop-blur-md transition-colors hover:bg-white/25 md:size-10";
 
@@ -111,7 +129,7 @@ export default function Home() {
                                 type="button"
                                 onClick={() => setSidebarOpen(true)}
                                 aria-label="Show sidebar"
-                                className={FLOATING_BUTTON_CLASS}
+                                className={GLASS_ROUND_ICON}
                             >
                                 <SidebarSimple size={20} />
                             </button>
@@ -122,7 +140,7 @@ export default function Home() {
                                 type="button"
                                 onClick={handleAddCity}
                                 aria-label={`Add ${selectedCity.name} to the list`}
-                                className={FLOATING_BUTTON_CLASS}
+                                className={GLASS_ROUND_ICON}
                             >
                                 <Plus size={20} weight="bold" />
                             </button>

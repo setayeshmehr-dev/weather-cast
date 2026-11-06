@@ -26,6 +26,7 @@ import type { CurrentWeather } from "@/hooks/useWeather";
 import type { City } from "@/lib/cities";
 import styles from "./MapCard.module.css";
 
+
 type MapCardProps = {
     city: City;
     current: CurrentWeather | null;
@@ -331,7 +332,7 @@ export default function MapCard({ city, current, className }: MapCardProps) {
                                                 setActiveLayer(layer.id);
                                                 setMenuOpen(false);
                                             }}
-                                            className={`group/item relative z-10 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all duration-200 ${
+                                            className={`group/item relative z-10 flex w-full items-center gap-1.5 rounded-xl px-2 py-1 text-left text-sm transition-all duration-200 ${
                                                 isActive
                                                     ? "bg-white/60 text-gray-900 shadow-[inset_0_1px_1px_rgba(255,255,255,0.9),0_2px_10px_rgba(31,38,135,0.12)] dark:bg-white/10 dark:text-white dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.12),0_2px_10px_rgba(0,0,0,0.4)]"
                                                     : "text-gray-700 hover:bg-white/40 hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.8)] dark:text-gray-300 dark:hover:bg-white/5"

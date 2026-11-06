@@ -96,7 +96,7 @@ export default function TopRightControls({ city, children }: TopRightControlsPro
                     {menuOpen && (
                         <div
                             role="menu"
-                            className={`absolute top-full right-0 z-40 mt-2 w-64 rounded-3xl border border-white/10 p-1.5 text-white shadow-2xl backdrop-blur-2xl
+                            className={`absolute top-full right-0 z-40 g-1 mt-2 w-64 rounded-3xl border border-white/10 p-1.5 text-white shadow-2xl backdrop-blur-2xl
                                 bg-[#0f0f14]/70
                                 supports-backdrop-filter:bg-[#0f0f14]/55
                                 supports-backdrop-filter:backdrop-blur-2xl
@@ -108,8 +108,6 @@ export default function TopRightControls({ city, children }: TopRightControlsPro
                                 label="Units"
                                 onClick={() => open("units")}
                             />
-
-                            <div className="mx-4 my-1 h-px bg-white/10" />
 
                             <MenuItem
                                 icon={<ChatCircleDots size={22} />}
