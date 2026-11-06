@@ -9,8 +9,8 @@ import {
     HERO_STOP,
     getHeroProgress,
 } from "@/lib/heroScroll";
-import { pauseVideosWhileScrolling } from "@/lib/pauseVideos";
 import { TOUCH_SCROLL, createSmoothScroll } from "@/lib/smoothScroll";
+
 
 // Content sliding under a card header fades over this distance (px).
 const HEADER_FADE = 12;

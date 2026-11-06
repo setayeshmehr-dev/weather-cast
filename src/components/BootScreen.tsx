@@ -42,7 +42,7 @@ export default function BootScreen({ done }: BootScreenProps) {
             role="status"
             aria-live="polite"
             aria-label="Loading weather"
-            className={`fixed inset-0 z-[70] flex items-center justify-center bg-linear-to-b from-sky-700 to-slate-900 transition-opacity duration-300 ${
+            className={`fixed inset-0 z-70 flex items-center justify-center bg-linear-to-b from-sky-700 to-slate-900 transition-opacity duration-300 ${
                 done ? "pointer-events-none opacity-0" : "opacity-100"
             }`}
         >
