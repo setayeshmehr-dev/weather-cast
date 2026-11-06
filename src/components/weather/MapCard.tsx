@@ -296,11 +296,11 @@ export default function MapCard({ city, current, className }: MapCardProps) {
                             {/* inner depth */}
                             <span className="absolute inset-0 rounded-full shadow-[inset_0_1px_0_rgba(255,255,255,0.7),inset_0_-1px_0_rgba(255,255,255,0.3),0_4px_16px_rgba(17,17,26,0.08)]" />
 
-                            <Stack size={16} weight="regular" className="relative text-gray-500" />
-                            <span className="relative">Layers</span>
+                            <Stack size={16} weight="regular" className="relative text-white/60" />
+                            <span className=" text-white/60! relative">Layers</span>
                             <CaretDown
                                 size={13}
-                                className={`relative transition-transform duration-300 ${
+                                className={` text-white/60 relative transition-transform duration-300 ${
                                     menuOpen ? "rotate-180" : ""
                                 }`}
                             />
@@ -309,7 +309,7 @@ export default function MapCard({ city, current, className }: MapCardProps) {
                         {menuOpen && (
                             <div
                                 role="menu"
-                                className={`${styles.menuPanel} absolute right-0 top-full z-20 mt-3 min-w-56 overflow-hidden rounded-2xl border border-white/60 bg-white/50 p-1.5 shadow-[0_12px_40px_rgba(31,38,135,0.16),inset_0_1px_0_rgba(255,255,255,0.6)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#17171b]/60 dark:shadow-[0_12px_40px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.08)]`}
+                                className={`${styles.menuPanel} flex flex-col gap-1.5 absolute right-0 top-full z-20 mt-3 min-w-56 overflow-hidden rounded-2xl border border-white/60 bg-white/50 p-1.5 shadow-[0_12px_40px_rgba(31,38,135,0.16),inset_0_1px_0_rgba(255,255,255,0.6)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#17171b]/60 dark:shadow-[0_12px_40px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.08)]`}
                             >
                                 {/* ambient light bubbles inside the glass */}
                                 <div className="pointer-events-none absolute -right-8 -top-10 size-28 rounded-full bg-sky-400/20 blur-2xl dark:bg-sky-400/20" />
