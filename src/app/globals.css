@@ -88,3 +88,45 @@ a {
         font-size: max(16px, 1em);
     }
 }
+
+@layer base {
+    /*
+     * Apple Weather scrollbar — one rule, every scrollbar:
+     * page (html), sidebar, hourly horizontal strip, popovers.
+     */
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+    }
+
+    /* WebKit fallback for browsers without scrollbar-color support */
+    *::-webkit-scrollbar {
+        width: 6px;  /* vertical scrollbars */
+        height: 6px; /* horizontal scrollbars — hourly strip */
+        background: transparent;
+    }
+
+    *::-webkit-scrollbar-thumb {
+        border-radius: 9999px;
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* no hover change — thumb never fades, track never lights up */
+    *::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    *::-webkit-scrollbar-thumb:active {
+        background: rgba(255, 255, 255, 0.25); /* stronger while dragging */
+    }
+
+    *::-webkit-scrollbar-track,
+    *::-webkit-scrollbar-track:hover {
+        background: transparent;
+    }
+
+    /* the corner where horizontal + vertical scrollbars meet */
+    *::-webkit-scrollbar-corner {
+        background: transparent;
+    }
+}

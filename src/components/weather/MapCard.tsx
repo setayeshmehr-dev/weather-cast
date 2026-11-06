@@ -304,7 +304,7 @@ export default function MapCard({ city, current, className }: MapCardProps) {
                                     menuOpen ? "rotate-180" : ""
                                 }`}
                             />
-</button>
+                        </button>
 
                         {menuOpen && (
                             <div

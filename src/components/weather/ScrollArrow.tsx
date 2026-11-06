@@ -30,7 +30,7 @@ export default function ScrollArrow({
         ? `size-10 rounded-full border border-white/25 bg-slate-900/45 backdrop-blur-md ${
             side === "left" ? "left-2" : "right-2"
         }`
-        : `h-16 w-10 ${side === "left" ? "-left-7" : "-right-7"}`;
+        : `h-16 w-10 ${side === "left" ? "-left-10" : "-right-10"}`;
 
     return (
         <button
@@ -42,7 +42,7 @@ export default function ScrollArrow({
                 event.stopPropagation();
                 onClick();
             }}
-            className={`absolute z-20 flex -translate-y-1/2 cursor-pointer items-center justify-center text-white transition-opacity duration-200 ${placement} ${
+            className={`hidden  absolute z-20 md:flex -translate-y-1/2 cursor-pointer items-center justify-center text-white transition-opacity duration-200 ${placement} ${
                 visible ? "opacity-100" : "pointer-events-none opacity-0"
             }`}
             style={{ top: top ?? "50%" }}

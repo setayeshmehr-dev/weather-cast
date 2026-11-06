@@ -101,7 +101,7 @@ export default function HourlyForecast({
             )}
 
             {!loading && !error && (
-                <div ref={scrollerRef} className="scrollbar-hide flex touch-pan-x touch-pinch-zoom snap-x snap-mandatory gap-1 overflow-x-auto pb-2">
+                <div ref={scrollerRef} className="scrollbar-hide flex touch-pan-x touch-pinch-zoom snap-x snap-mandatory gap-1 overflow-x-auto pb-5">
                     {current && (
                         <div className="flex w-14 shrink-0 snap-start flex-col items-center gap-3">
                             <span className="whitespace-nowrap text-sm text-white/80">
