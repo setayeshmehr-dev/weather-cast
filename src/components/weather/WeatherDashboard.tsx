@@ -1,9 +1,6 @@
 "use client";
 
-import {
-    WeatherIconProvider,
-    WeatherIconStyleToggle,
-} from "@/components/weather/WeatherIcon";
+import {WeatherIconProvider,} from "@/components/weather/WeatherIcon";
 import AirQualityCard from "@/components/weather/AirQualityCard";
 import AveragesCard from "@/components/weather/AveragesCard";
 import FeelsLikeCard from "@/components/weather/FeelsLikeCard";

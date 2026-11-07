@@ -1,14 +1,18 @@
-
 "use client";
 
 import {
     createContext,
+    useCallback,
     useContext,
     useEffect,
+    useMemo,
     useState,
 } from "react";
+import type { ReactNode } from "react";
 
-type WeatherIconStyle = "line" | "fill";
+export type WeatherIconStyle = "line" | "fill";
+
+const STORAGE_KEY = "weather-icon-style";
 
 type WeatherIconContextValue = {
     style: WeatherIconStyle;
@@ -26,47 +30,47 @@ const WeatherIconContext = createContext<WeatherIconContextValue>({
     toggleStyle: () => {},
 });
 
-export function WeatherIconProvider({
-    children,
-}: {
-    children: React.ReactNode;
-}) {
-    const [style, setStyle] = useState<WeatherIconStyle>("line");
+function readSavedStyle(): WeatherIconStyle {
+    if (typeof window === "undefined") return "line";
 
-    useEffect(() => {
-        const savedStyle = localStorage.getItem("weather-icon-style");
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
 
-        if (savedStyle === "line" || savedStyle === "fill") {
-            setStyle(savedStyle);
-        }
-    }, []);
-
-    function toggleStyle() {
-        const nextStyle = style === "line" ? "fill" : "line";
-        localStorage.setItem("weather-icon-style", nextStyle);
-        setStyle(nextStyle);
+        return saved === "fill" ? "fill" : "line";
+    } catch {
+        return "line";
     }
+}
+
+export function WeatherIconProvider({ children }: { children: ReactNode }) {
+    // The provider is mounted after hydration, so the saved style can be read at once
+    // (no flash of the other style).
+    const [style, setStyle] = useState<WeatherIconStyle>(readSavedStyle);
+
+    const toggleStyle = useCallback(() => {
+        const next: WeatherIconStyle = style === "line" ? "fill" : "line";
+
+        try {
+            localStorage.setItem(STORAGE_KEY, next);
+        } catch {
+            // The style still changes until the page is closed.
+        }
+
+        setStyle(next);
+    }, [style]);
+
+    const value = useMemo(() => ({ style, toggleStyle }), [style, toggleStyle]);
 
     return (
-        <WeatherIconContext.Provider value={{ style, toggleStyle }}>
+        <WeatherIconContext.Provider value={value}>
             {children}
         </WeatherIconContext.Provider>
     );
 }
 
-export function WeatherIconStyleToggle() {
-    const { style, toggleStyle } = useContext(WeatherIconContext);
-
-    return (
-        <button
-            type="button"
-            onClick={toggleStyle}
-            className="mx-auto mt-6 block rounded-full border border-white/25 bg-black/15 px-4 py-2 text-sm text-white/80 backdrop-blur-md transition hover:bg-white/15 hover:text-white"
-            aria-label="Toggle weather icon style"
-        >
-            Icon style: {style === "line" ? "Line" : "Fill"}
-        </button>
-    );
+/** The style of the weather icons ("line" or "fill") and a function that switches it. */
+export function useWeatherIconStyle(): WeatherIconContextValue {
+    return useContext(WeatherIconContext);
 }
 
 export default function WeatherIcon({
@@ -74,13 +78,13 @@ export default function WeatherIcon({
     label,
     size = 40,
 }: WeatherIconProps) {
-    const { style } = useContext(WeatherIconContext);
+    const { style } = useWeatherIconStyle();
     const [src, setSrc] = useState<string | null>(null);
 
     useEffect(() => {
         let active = true;
-        setSrc(null);
 
+        // The icon on screen stays until the new one is loaded (no blank moment).
         import(`@meteocons/svg/${style}/${slug}.svg`)
             .then((module) => {
                 if (active) setSrc(module.default);

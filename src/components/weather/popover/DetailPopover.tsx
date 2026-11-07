@@ -280,8 +280,8 @@ export default function DetailPopover({
                  */}
                 <div
                     className={`relative flex h-full flex-col overflow-hidden border border-white/10 text-white shadow-2xl
-                        bg-[#0f0f14]/30
-                        supports-backdrop-filter:bg-[#0f0f14]/25
+                        bg-[#0f0f14]/70
+                        supports-backdrop-filter:bg-[#0f0f14]/75
                         supports-backdrop-filter:backdrop-blur-2xl
                         supports-backdrop-filter:backdrop-saturate-[1.8]
                         ${mobile ? "rounded-t-[28px]" : "rounded-[22px]"}`}
@@ -293,26 +293,51 @@ export default function DetailPopover({
                     />
 
                     {/*
-                     * Pinned header — now a SIBLING of the scroll container, not
-                     * a child. This is the bulletproof fix for the overscroll
-                     * problem: even if the scroll container rubber-bands on iOS
-                     * Safari or Chrome, the header is structurally outside the
-                     * scroll context and cannot be dragged along.
+                     * Floating frosted header — it lies OVER the scroll area, not
+                     * above it: the content glides under it, dimmed and softly
+                     * blurred.
+                     *
+                     * The frost is a layer of its own, under the content:
+                     *   - a dark gradient plus backdrop-blur-lg, so the passing
+                     *     text shows through faint and melted;
+                     *   - a mask that fades BOTH the dimming and the blur out
+                     *     toward the bottom, so the header ends in a soft
+                     *     gradient. There is deliberately no hairline and no
+                     *     hard edge at its lower side — the bottom of the header
+                     *     must never be felt as a line. The mask sits on the
+                     *     frost layer only, so the title never fades with it.
+                     *
+                     * The header is pointer-events-none: wheels and touches over
+                     * it keep scrolling the content underneath; only the close
+                     * button catches clicks.
+                     *
+                     * Like before, it is a SIBLING of the scroll container, not a
+                     * child: even if the container rubber-bands on iOS Safari or
+                     * Chrome, the header cannot be dragged along.
                      */}
-                    <header className="relative z-10 flex h-14 shrink-0 items-center justify-center gap-2 bg-[#0a0a0f]/35">
-                        {/* Soft 1px shadow at the header's bottom edge for depth */}
+                    <header className="pointer-events-none absolute inset-x-0 top-0 z-10 flex h-14 items-center justify-center gap-2">
                         <span
                             aria-hidden="true"
-                            className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-black/25"
+                            className={`pointer-events-none absolute inset-0
+                                bg-linear-to-b from-[#0a0a0f]/80 to-[#0a0a0f]/15
+                                supports-backdrop-filter:from-[#0a0a0f]/45
+                                supports-backdrop-filter:to-[#0a0a0f]/0
+                                supports-backdrop-filter:backdrop-blur-lg
+                                supports-backdrop-filter:backdrop-saturate-[1.8]
+                                mask-[linear-gradient(to_bottom,black_55%,transparent)]
+                                [-webkit-mask-image:linear-gradient(to_bottom,black_55%,transparent)]`}
                         />
-                        {icon}
-                        <h2 className="text-base font-semibold">{title}</h2>
+
+                        {icon ? <span className="relative">{icon}</span> : null}
+
+                        <h2 className="relative text-base font-semibold">{title}</h2>
+
                         {mobile && (
                             <button
                                 type="button"
                                 onClick={onClose}
                                 aria-label="Close"
-                                className="absolute right-3 flex size-8 items-center justify-center rounded-full bg-white/15 hover:bg-white/25"
+                                className="pointer-events-auto absolute right-3 flex size-8 items-center justify-center rounded-full bg-white/15 hover:bg-white/25"
                             >
                                 <X size={16} weight="bold" />
                             </button>
@@ -320,7 +345,9 @@ export default function DetailPopover({
                     </header>
 
                     {/*
-                     * Scroll container — only the body content scrolls.
+                     * Scroll container — it fills the whole panel, so the body
+                     * scrolls UNDER the header: the top padding (pt-14 = h-14)
+                     * keeps the content below it while at rest.
                      *
                      * `overscroll-none` (overscroll-behavior: none) kills the
                      * rubber-band bounce and pull-to-refresh gesture at both
@@ -346,7 +373,7 @@ export default function DetailPopover({
                      * default thick bar) + `scrollbar-color` (thumb + track).
                      */}
                     <div
-                        className="min-h-0 flex-1 overflow-y-auto overscroll-none [-webkit-overflow-scrolling:auto]
+                        className="min-h-0 flex-1 overflow-y-auto overscroll-none pt-14 [-webkit-overflow-scrolling:auto]
                             [&::-webkit-scrollbar]:w-1.5
                             [&::-webkit-scrollbar]:bg-transparent
                             [&::-webkit-scrollbar-thumb]:rounded-full

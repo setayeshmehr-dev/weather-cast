@@ -1,6 +1,12 @@
 "use client";
 
-import { ChatCircleDots, DotsThreeVertical, Ruler } from "@phosphor-icons/react";
+import {
+    ChatCircleDots,
+    CloudSun,
+    DotsThreeVertical,
+    Ruler,
+} from "@phosphor-icons/react";
+import { useWeatherIconStyle } from "@/components/weather/WeatherIcon";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
@@ -33,13 +39,15 @@ type MenuItemProps = {
     icon: ReactNode;
     label: string;
     onClick: () => void;
+    checked?: boolean;
 };
 
-function MenuItem({ icon, label, onClick }: MenuItemProps) {
+function MenuItem({ icon, label, onClick, checked }: MenuItemProps) {
     return (
         <button
             type="button"
-            role="menuitem"
+            role={checked === undefined ? "menuitem" : "menuitemcheckbox"}
+            aria-checked={checked}
             onClick={onClick}
             className="flex w-full items-center gap-3.5 rounded-2xl px-4 py-3 text-left text-[17px] transition-colors hover:bg-white/10"
         >
@@ -65,6 +73,7 @@ export default function TopRightControls({ city, children }: TopRightControlsPro
     const [menuOpen, setMenuOpen] = useState(false);
     const [dialog, setDialog] = useState<"units" | "report" | null>(null);
     const menuRef = useRef<HTMLDivElement | null>(null);
+    const { style: iconStyle, toggleStyle: toggleIconStyle } = useWeatherIconStyle();
 
     // The menu closes on a click outside it, and on Escape.
     useEffect(() => {
@@ -121,6 +130,22 @@ export default function TopRightControls({ city, children }: TopRightControlsPro
                                 supports-backdrop-filter:backdrop-saturate-[1.8]
                             `}
                         >
+
+                            <MenuItem
+                                icon={
+                                    <CloudSun
+                                        size={22}
+                                        weight={iconStyle === "fill" ? "fill" : "regular"}
+                                    />
+                                }
+                                label="Icon Style"
+                                checked={iconStyle === "fill"}
+                                onClick={() => {
+                                    toggleIconStyle();
+                                    setMenuOpen(false);
+                                }}
+                            />
+
                             <MenuItem
                                 icon={<Ruler size={22} />}
                                 label="Units"

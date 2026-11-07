@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ReactNode } from "react";
@@ -12,26 +13,27 @@ import {
 } from "@/lib/heroScroll";
 
 type LineProps = {
-    /** CSS variable (set by the scroll layout) with the share of the line still shown. */
     variable: string;
     height: number;
-    /** "out": the line leaves (1 -> 0). "in": the line arrives (0 -> 1). */
     direction: "out" | "in";
     hidden?: boolean;
     children: ReactNode;
 };
 
-/*
- * A line that collapses with the scroll. Its opacity changes faster than its height,
- * so the text fades before it is cut off.
- */
-function Line({ variable, height, direction, hidden, children }: LineProps) {
+function Line({
+    variable,
+    height,
+    direction,
+    hidden,
+    children,
+}: LineProps) {
     const opacity =
-        direction === "out" ? `clamp(0, calc(var(${variable}) * 2 - 0.6), 1)` : `clamp(0, calc(var(${variable}) * 2 - 0.8), 1)`;
+        direction === "out"
+            ? `clamp(0, calc(var(${variable}) * 2 - 0.6), 1)`
+            : `clamp(0, calc(var(${variable}) * 2 - 0.8), 1)`;
 
-        
-        return (
-            <div
+    return (
+        <div
             aria-hidden={hidden}
             className="flex w-full justify-center overflow-hidden"
             style={{
@@ -39,11 +41,11 @@ function Line({ variable, height, direction, hidden, children }: LineProps) {
                 opacity,
                 willChange: "height, opacity",
             }}
-            >
+        >
             <div
                 className="flex shrink-0 items-start justify-center"
                 style={{ height, lineHeight: `${height}px` }}
-                >
+            >
                 {children}
             </div>
         </div>
@@ -66,13 +68,14 @@ export default function HeroHeader({
     onRetry,
 }: HeroHeaderProps) {
     const fmt = useFormat();
+
     return (
         <div
             className="flex flex-col items-center text-center text-white"
             style={{ paddingTop: HERO_TOP }}
         >
             <h1
-                className="max-w-full truncate px-14 text-[34px]"
+                className="w-full max-w-full truncate px-14 text-[34px]"
                 style={{
                     height: HERO_NAME_HEIGHT,
                     lineHeight: `${HERO_NAME_HEIGHT}px`,
@@ -105,12 +108,17 @@ export default function HeroHeader({
                         height={HERO_TEMP_HEIGHT}
                         direction="out"
                     >
-                        <span className="text-[96px] font-extralight">
-                            {fmt.temperature(current.temperature)}°
+                        <span className="relative inline-block whitespace-nowrap text-[96px] font-extralight tabular-nums">
+                            {fmt.temperature(current.temperature)}
+                            <span
+                                aria-hidden="true"
+                                className="absolute left-full top-[0.08em] text-[0.55em] font-extralight leading-none"
+                            >
+                                °
+                            </span>
                         </span>
                     </Line>
 
-                    {/* وضعیت هوا: Partly cloudy / Overcast / Clear / ... */}
                     <Line
                         variable="--hero-status"
                         height={HERO_LINE_HEIGHT}
@@ -126,22 +134,23 @@ export default function HeroHeader({
                         height={HERO_LINE_HEIGHT}
                         direction="out"
                     >
-                        <span className="text-xl font-semibold text-white/85">
+                        <span className="whitespace-nowrap text-xl font-semibold tabular-nums text-white/85">
                             H:{fmt.temperature(current.max)}° L:{fmt.temperature(current.min)}°
                         </span>
                     </Line>
 
-                    {/* نسخه‌ی یک‌خطی: دما | وضعیت هوا */}
                     <Line
                         variable="--hero-compact"
                         height={HERO_LINE_HEIGHT}
                         direction="in"
                         hidden
                     >
-                        <span className="flex items-center text-xl font-semibold">
+                        <span className="flex items-center whitespace-nowrap text-xl font-semibold tabular-nums">
                             {fmt.temperature(current.temperature)}°
                             <span className="mx-3 h-5 w-0.5 rounded-full bg-white/90" />
-                            <span className="text-white/90">{current.condition}</span>
+                            <span className="text-white/90">
+                                {current.condition}
+                            </span>
                         </span>
                     </Line>
                 </>

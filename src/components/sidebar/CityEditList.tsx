@@ -1,48 +1,17 @@
 
 "use client";
 
-import { CaretDown, CaretUp, Trash } from "@phosphor-icons/react";
+import { List, Minus } from "@phosphor-icons/react";
+import { createPortal } from "react-dom";
 import { useLayoutEffect, useRef } from "react";
-import type { ReactNode } from "react";
 
 import CityCard from "@/components/sidebar/CityCard";
+import { useDragReorder } from "@/hooks/useDragReorder";
 import type { CitySummary } from "@/hooks/useCitySummaries";
 import type { City } from "@/lib/cities";
 
 const MOVE_MS = 340;
 const EASING = "cubic-bezier(0.22, 1, 0.36, 1)";
-
-type RowButtonProps = {
-    label: string;
-    disabled?: boolean;
-    danger?: boolean;
-    onClick: () => void;
-    children: ReactNode;
-};
-
-function RowButton({
-    label,
-    disabled,
-    danger,
-    onClick,
-    children,
-}: RowButtonProps) {
-    return (
-        <button
-            type="button"
-            aria-label={label}
-            disabled={disabled}
-            onClick={onClick}
-            className={`flex min-h-0 aspect-square rounded-full items-center justify-center bg-white/10 text-white transition-colors duration-200 disabled:opacity-30 ${
-                danger
-                    ? "enabled:hover:bg-red-700"
-                    : "enabled:hover:bg-white/25"
-            }`}
-        >
-            {children}
-        </button>
-    );
-}
 
 type CityEditListProps = {
     cities: City[];
@@ -63,6 +32,22 @@ export default function CityEditList({
 }: CityEditListProps) {
     const rows = useRef(new Map<string, HTMLLIElement>());
     const tops = useRef(new Map<string, number>());
+
+    const drag = useDragReorder(cities, onMove);
+
+    const draggedCity = cities.find(
+        (city) => city.id === drag.draggingId
+    );
+
+    const visibleCities = drag.draggingId
+        ? cities.filter((city) => city.id !== drag.draggingId)
+        : cities;
+
+    const displayItems: (City | null)[] = [...visibleCities];
+
+    if (drag.draggingId && drag.dropIndex !== null) {
+        displayItems.splice(drag.dropIndex, 0, null);
+    }
 
     useLayoutEffect(() => {
         const reduceMotion = window.matchMedia(
@@ -115,61 +100,107 @@ export default function CityEditList({
     });
 
     return (
-        <ul className="relative flex flex-col gap-4">
-            {cities.map((city, index) => (
-                <li
-                    key={city.id}
-                    ref={(element) => {
-                        if (element) {
-                            rows.current.set(city.id, element);
-                        } else {
-                            rows.current.delete(city.id);
-                        }
-                    }}
-                    className="flex h-21 gap-2"
-                >
-                    <div className="flex w-6 shrink-0 m-1 items-center justify-center">
-                        <RowButton
-                            label={`Delete ${city.name}`}
-                            danger
-                            onClick={() => onRemove(city.id)}
-                        >
-                            <Trash size={16} weight="bold" className="m-2" />
-                        </RowButton>
-                    </div>
+        <>
+            <ul className="relative flex flex-col gap-4">
+                {displayItems.map((city, index) => {
+                    if (!city) {
+                        return (
+                            <li
+                                key="drop-placeholder"
+                                className="h-21 shrink-0 rounded-2xl border-2 border-dashed border-white/30 bg-white/5"
+                            />
+                        );
+                    }
 
-                    <div className="min-w-0 flex-1">
-                        <CityCard
-                            city={city}
-                            summary={summaries[city.id]}
-                            now={now}
-                            selected={city.id === selectedCity.id}
-                            canRemove={false}
-                            onSelect={() => {}}
-                            onRemove={() => {}}
-                            compact
-                        />
-                    </div>
-
-                    <div className="flex w-6 shrink-0 flex-col justify-center gap-3">
-                        <RowButton
-                            label={`Move ${city.name} up`}
-                            disabled={index === 0}
-                            onClick={() => onMove(index, index - 1)}
+                    return (
+                        <li
+                            key={city.id}
+                            ref={(element) => {
+                                if (element) {
+                                    rows.current.set(city.id, element);
+                                } else {
+                                    rows.current.delete(city.id);
+                                }
+                            }}
+                            data-draggable-id={city.id}
+                            className="flex flex-1 h-21 shrink-0 gap-2"
                         >
-                            <CaretUp size={16} weight="bold" />
-                        </RowButton>
+                            <div className=" flex w-6 shrink-0 items-center justify-center">
+                                <button
+                                    type="button"
+                                    aria-label={`Delete ${city.name}`}
+                                    onClick={() => onRemove(city.id)}
+                                    className="flex aspect-square w-4 items-center justify-center rounded-full bg-red-700 text-white transition-colors hover:bg-red-600"
+                                >
+                                    <Minus size={13} weight="bold" />
+                                </button>
+                            </div>
 
-                        <RowButton
-                            label={`Move ${city.name} down`}
-                            disabled={index === cities.length - 1}
-                            onClick={() => onMove(index, index + 1)}
-                        >
-                            <CaretDown size={16} weight="bold" />
-                        </RowButton>
-                    </div>
-                </li>
-            ))}
-        </ul>
+                            <div className="min-w-0 flex-1">
+                                <CityCard
+                                    city={city}
+                                    summary={summaries[city.id]}
+                                    now={now}
+                                    selected={city.id === selectedCity.id}
+                                    canRemove={false}
+                                    onSelect={() => {}}
+                                    onRemove={() => {}}
+                                    compact
+                                />
+                            </div>
+
+                            <div className="flex w-6 shrink-0 items-center justify-center">
+                                <button
+                                    type="button"
+                                    aria-label={`Reorder ${city.name}`}
+                                    onPointerDown={(event) =>
+                                        drag.onItemPointerDown(city.id, event)
+                                    }
+                                    className="flex h-full w-full touch-none cursor-grab items-center justify-center text-white/50 transition-colors hover:text-white active:cursor-grabbing"
+                                >
+                                    <List size={25} weight="regular" />
+                                </button>
+                            </div>
+                        </li>
+                    );
+                })}
+            </ul>
+
+            {draggedCity &&
+                drag.pointerPosition &&
+                drag.cardRect &&
+                typeof document !== "undefined" &&
+                createPortal(
+                    <div
+                        className="pointer-events-none fixed z-9999"
+                        style={{
+                            left:
+                                drag.pointerPosition.x -
+                                drag.pointerOffset.x,
+                            top:
+                                drag.pointerPosition.y -
+                                drag.pointerOffset.y,
+                            width: drag.cardRect.width,
+                            height: drag.cardRect.height,
+                        }}
+                    >
+                        <div className="h-full scale-[1.02] opacity-95 shadow-2xl">
+                            <CityCard
+                                city={draggedCity}
+                                summary={summaries[draggedCity.id]}
+                                now={now}
+                                selected={
+                                    draggedCity.id === selectedCity.id
+                                }
+                                canRemove={false}
+                                onSelect={() => {}}
+                                onRemove={() => {}}
+                                compact
+                            />
+                        </div>
+                    </div>,
+                    document.body
+                )}
+        </>
     );
 }
