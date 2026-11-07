@@ -12,7 +12,6 @@ import { Fragment, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 
-
 import CityCard from "@/components/sidebar/CityCard";
 import CityEditList from "@/components/sidebar/CityEditList";
 import { useCitySearch } from "@/hooks/useCitySearch";
@@ -94,6 +93,11 @@ export default function Sidebar({
 
     const trimmed = query.trim();
     const searching = focused || query !== "";
+
+    const handleClose = () => {
+        setEditing(false);
+        onClose();
+    };
 
     const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
         if (event.key === "Escape") {
@@ -257,7 +261,7 @@ export default function Sidebar({
 
                 <button
                     type="button"
-                    onClick={onClose}
+                    onClick={handleClose}
                     aria-label="Hide sidebar"
                     className="flex size-8 items-center justify-center rounded-lg text-white/80 hover:bg-white/10"
                 >

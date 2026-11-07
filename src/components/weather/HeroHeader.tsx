@@ -139,7 +139,7 @@ export default function HeroHeader({
                         hidden
                     >
                         <span className="flex items-center text-xl font-semibold">
-                            {Math.round(current.temperature)}°
+                            {fmt.temperature(current.temperature)}°
                             <span className="mx-3 h-5 w-0.5 rounded-full bg-white/90" />
                             <span className="text-white/90">{current.condition}</span>
                         </span>

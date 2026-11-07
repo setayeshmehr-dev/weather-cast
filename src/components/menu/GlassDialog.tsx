@@ -104,14 +104,8 @@ export default function GlassDialog({
                         ${shown ? "opacity-100 md:scale-100" : "opacity-0 md:scale-95"}
                     `}
             >
-                <header className="grid shrink-0 grid-cols-[2.75rem_1fr_2.75rem] items-center gap-2 px-4 pt-4 pb-3 max-md:pt-[max(1rem,env(safe-area-inset-top))]">
-                    {showClose ? (
-                        <RoundButton label="Close" onClick={() => closeRef.current()}>
-                            <X size={22} weight="bold" />
-                        </RoundButton>
-                    ) : (
-                        <span />
-                    )}
+                <header className=" items-center gap-2 px-4 pt-4 pb-3 max-md:pt-[max(1rem,env(safe-area-inset-top))]">
+            
 
                     <h2 id={titleId} className="text-center text-[17px] font-semibold">
                         {title}
