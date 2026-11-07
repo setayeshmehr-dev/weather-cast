@@ -104,7 +104,7 @@ export default function GlassDialog({
                         ${shown ? "opacity-100 md:scale-100" : "opacity-0 md:scale-95"}
                     `}
             >
-                <header className=" items-center gap-2 px-4 pt-4 pb-3 max-md:pt-[max(1rem,env(safe-area-inset-top))]">
+                <header className=" items-center flex justify-between gap-2 px-4 pt-4 pb-3 max-md:pt-[max(1rem,env(safe-area-inset-top))]">
             
 
                     <h2 id={titleId} className="text-center text-[17px] font-semibold">
