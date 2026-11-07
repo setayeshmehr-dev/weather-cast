@@ -1,3 +1,4 @@
+
 "use client";
 
 import { X } from "@phosphor-icons/react";
@@ -12,12 +13,6 @@ const MARGIN = 12;
 const ARROW_INSET = 28;
 const MOBILE_QUERY = "(max-width: 767px)";
 
-/*
- * SVG arrow fills can't carry backdrop-filter, so we approximate the frosted
- * dark glass panel with a near-opaque dark color (#16161c) that visually
- * matches the panel's appearance against most backgrounds. The stroke mirrors
- * the 1px hairline border used on the panel itself (rgba(255,255,255,0.08)).
- */
 const PANEL_FILL = "#16161c";
 const PANEL_STROKE = "rgba(255,255,255,0.08)";
 
@@ -35,12 +30,6 @@ function clamp(value: number, min: number, max: number): number {
     return Math.min(Math.max(value, min), Math.max(min, max));
 }
 
-/*
- * Placement rules:
- *  1. not enough room below the anchor: open above it;
- *  2. otherwise open on its left when there is room on the left;
- *  3. otherwise open on its right.
- */
 function computePlacement(anchor: HTMLElement): Placement {
     const rect = anchor.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
@@ -65,16 +54,25 @@ function computePlacement(anchor: HTMLElement): Placement {
             const side: Side = canOpenRight ? "right" : "left";
             const top = canOpenBelow
                 ? clamp(rect.top, MARGIN, viewportHeight - MARGIN - height)
-                : clamp(rect.bottom - height, MARGIN, viewportHeight - MARGIN - height);
+                : clamp(
+                    rect.bottom - height,
+                    MARGIN,
+                    viewportHeight - MARGIN - height
+                );
 
             return {
                 side,
                 top,
-                left: side === "right"
-                    ? rect.right + GAP
-                    : rect.left - GAP - WIDTH,
+                left:
+                    side === "right"
+                        ? rect.right + GAP
+                        : rect.left - GAP - WIDTH,
                 height,
-                arrow: clamp(centerY - top, ARROW_INSET, height - ARROW_INSET),
+                arrow: clamp(
+                    centerY - top,
+                    ARROW_INSET,
+                    height - ARROW_INSET
+                ),
             };
         }
 
@@ -83,16 +81,22 @@ function computePlacement(anchor: HTMLElement): Placement {
             MARGIN,
             viewportHeight - MARGIN - height
         );
+
         const side: Side = canOpenRight ? "right" : "left";
 
         return {
             side,
             top,
-            left: side === "right"
-                ? rect.right + GAP
-                : rect.left - GAP - WIDTH,
+            left:
+                side === "right"
+                    ? rect.right + GAP
+                    : rect.left - GAP - WIDTH,
             height,
-            arrow: clamp(centerY - top, ARROW_INSET, height - ARROW_INSET),
+            arrow: clamp(
+                centerY - top,
+                ARROW_INSET,
+                height - ARROW_INSET
+            ),
         };
     }
 
@@ -117,7 +121,11 @@ function computePlacement(anchor: HTMLElement): Placement {
         top,
         left,
         height,
-        arrow: clamp(centerX - left, ARROW_INSET, WIDTH - ARROW_INSET),
+        arrow: clamp(
+            centerX - left,
+            ARROW_INSET,
+            WIDTH - ARROW_INSET
+        ),
     };
 }
 
@@ -138,12 +146,15 @@ function PopoverArrow({ side, offset }: PopoverArrowProps) {
                 aria-hidden="true"
             >
                 <path d="M0 0 L8 8 L16 0 Z" fill={PANEL_FILL} />
-                <path d="M0 0.5 L8 7.5 L16 0.5" fill="none" stroke={PANEL_STROKE} />
+                <path
+                    d="M0 0.5 L8 7.5 L16 0.5"
+                    fill="none"
+                    stroke={PANEL_STROKE}
+                />
             </svg>
         );
     }
 
-    // The popover is on the left of the anchor: the arrow sits on its right edge.
     const onRightEdge = side === "left";
 
     return (
@@ -158,12 +169,20 @@ function PopoverArrow({ side, offset }: PopoverArrowProps) {
             {onRightEdge ? (
                 <>
                     <path d="M0 0 L8 8 L0 16 Z" fill={PANEL_FILL} />
-                    <path d="M0 0.5 L7.5 8 L0 15.5" fill="none" stroke={PANEL_STROKE} />
+                    <path
+                        d="M0 0.5 L7.5 8 L0 15.5"
+                        fill="none"
+                        stroke={PANEL_STROKE}
+                    />
                 </>
             ) : (
                 <>
                     <path d="M8 0 L0 8 L8 16 Z" fill={PANEL_FILL} />
-                    <path d="M8 0.5 L0.5 8 L8 15.5" fill="none" stroke={PANEL_STROKE} />
+                    <path
+                        d="M8 0.5 L0.5 8 L8 15.5"
+                        fill="none"
+                        stroke={PANEL_STROKE}
+                    />
                 </>
             )}
         </svg>
@@ -191,11 +210,14 @@ export default function DetailPopover({
     onClose,
     children,
 }: DetailPopoverProps) {
-    // The popover only exists after a click, so reading window here is safe.
     const [mobile, setMobile] = useState(
         () => window.matchMedia(MOBILE_QUERY).matches
     );
-    const [placement, setPlacement] = useState(() => computePlacement(anchor));
+
+    const [placement, setPlacement] = useState(() =>
+        computePlacement(anchor)
+    );
+
     const panelRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
@@ -217,7 +239,6 @@ export default function DetailPopover({
         };
     }, [anchor, onClose]);
 
-    // Moves the focus into the popover and gives it back when it closes.
     useEffect(() => {
         const previous = document.activeElement as HTMLElement | null;
 
@@ -246,7 +267,7 @@ export default function DetailPopover({
                 tabIndex={-1}
                 className={
                     mobile
-                        ? "fixed inset-x-0 bottom-0 z-50 h-[90dvh] outline-none transition-transform duration-300 starting:translate-y-full motion-reduce:transition-none motion-reduce:duration-0"
+                        ? "fixed inset-x-0 bottom-0 z-50 h-[calc(100dvh-1.5rem)] outline-none transition-transform duration-300 starting:translate-y-full motion-reduce:transition-none motion-reduce:duration-0"
                         : `fixed z-50 outline-none transition duration-150 starting:scale-95 starting:opacity-0 motion-reduce:transition-none motion-reduce:duration-0 ${ORIGIN[placement.side]}`
                 }
                 style={
@@ -261,23 +282,12 @@ export default function DetailPopover({
                 }
             >
                 {!mobile && (
-                    <PopoverArrow side={placement.side} offset={placement.arrow} />
+                    <PopoverArrow
+                        side={placement.side}
+                        offset={placement.arrow}
+                    />
                 )}
 
-                {/*
-                 * Frosted dark glass sheet (Apple Weather style).
-                 *
-                 * Background layering strategy:
-                 *   1. Default (no backdrop-filter support): bg-[#0f0f14]/70 — a
-                 *      semi-opaque dark fill that still reads correctly over busy
-                 *      backgrounds.
-                 *   2. With backdrop-filter (modern browsers): bg-[#0f0f14]/55 +
-                 *      backdrop-blur-2xl (blur 40px) + backdrop-saturate-[1.8]
-                 *      (saturate 180%). Whatever sits behind the popover bleeds
-                 *      through as a soft blurred glow.
-                 *
-                 * Border: white/10 hairline outline for the "lit glass edge" look.
-                 */}
                 <div
                     className={`relative flex h-full flex-col overflow-hidden border border-white/10 text-white shadow-2xl
                         bg-[#0f0f14]/70
@@ -286,51 +296,34 @@ export default function DetailPopover({
                         supports-backdrop-filter:backdrop-saturate-[1.8]
                         ${mobile ? "rounded-t-[28px]" : "rounded-[22px]"}`}
                 >
-                    {/* 1px lit-glass hairline along the very top edge of the panel */}
                     <span
                         aria-hidden="true"
                         className="pointer-events-none absolute inset-x-0 top-0 z-20 h-px bg-white/10"
                     />
 
-                    {/*
-                     * Floating frosted header — it lies OVER the scroll area, not
-                     * above it: the content glides under it, dimmed and softly
-                     * blurred.
-                     *
-                     * The frost is a layer of its own, under the content:
-                     *   - a dark gradient plus backdrop-blur-lg, so the passing
-                     *     text shows through faint and melted;
-                     *   - a mask that fades BOTH the dimming and the blur out
-                     *     toward the bottom, so the header ends in a soft
-                     *     gradient. There is deliberately no hairline and no
-                     *     hard edge at its lower side — the bottom of the header
-                     *     must never be felt as a line. The mask sits on the
-                     *     frost layer only, so the title never fades with it.
-                     *
-                     * The header is pointer-events-none: wheels and touches over
-                     * it keep scrolling the content underneath; only the close
-                     * button catches clicks.
-                     *
-                     * Like before, it is a SIBLING of the scroll container, not a
-                     * child: even if the container rubber-bands on iOS Safari or
-                     * Chrome, the header cannot be dragged along.
-                     */}
                     <header className="pointer-events-none absolute inset-x-0 top-0 z-10 flex h-14 items-center justify-center gap-2">
                         <span
                             aria-hidden="true"
-                            className={`pointer-events-none absolute inset-0
-                                bg-linear-to-b from-[#0a0a0f]/80 to-[#0a0a0f]/15
-                                supports-backdrop-filter:from-[#0a0a0f]/45
-                                supports-backdrop-filter:to-[#0a0a0f]/0
-                                supports-backdrop-filter:backdrop-blur-lg
-                                supports-backdrop-filter:backdrop-saturate-[1.8]
-                                mask-[linear-gradient(to_bottom,black_55%,transparent)]
-                                [-webkit-mask-image:linear-gradient(to_bottom,black_55%,transparent)]`}
+                            className="pointer-events-none absolute inset-0"
+                            style={{
+                                background:
+                                    "linear-gradient(to bottom, rgba(10,10,15,0.78) 0%, rgba(10,10,15,0.48) 55%, rgba(10,10,15,0) 100%)",
+                                backdropFilter: "blur(16px) saturate(1.8)",
+                                WebkitBackdropFilter: "blur(16px) saturate(1.8)",
+                                maskImage:
+                                    "linear-gradient(to bottom, black 0%, black 55%, transparent 100%)",
+                                WebkitMaskImage:
+                                    "linear-gradient(to bottom, black 0%, black 55%, transparent 100%)",
+                            }}
                         />
 
-                        {icon ? <span className="relative">{icon}</span> : null}
+                        {icon ? (
+                            <span className="relative">{icon}</span>
+                        ) : null}
 
-                        <h2 className="relative text-base font-semibold">{title}</h2>
+                        <h2 className="relative text-base font-semibold">
+                            {title}
+                        </h2>
 
                         {mobile && (
                             <button
@@ -344,34 +337,6 @@ export default function DetailPopover({
                         )}
                     </header>
 
-                    {/*
-                     * Scroll container — it fills the whole panel, so the body
-                     * scrolls UNDER the header: the top padding (pt-14 = h-14)
-                     * keeps the content below it while at rest.
-                     *
-                     * `overscroll-none` (overscroll-behavior: none) kills the
-                     * rubber-band bounce and pull-to-refresh gesture at both
-                     * scroll boundaries on modern browsers. The explicit
-                     * [overscroll-behavior:none] and [-webkit-overflow-scrolling:auto]
-                     * fallbacks catch older iOS Safari variants.
-                     *
-                     * Custom scrollbar styling (Apple Weather style):
-                     *   - Thin 6px thumb (w-1.5)
-                     *   - Translucent white thumb (bg-white/15) — visible on the
-                     *     frosted dark glass but unobtrusive
-                     *   - Transparent track — no "tunnel" ever, even on hover
-                     *   - No hover state change — thumb stays the same color
-                     *     whether the pointer is over it or not
-                     *
-                     * These arbitrary-variant rules compile to:
-                     *   .scoped-class::-webkit-scrollbar-thumb:hover { ... }
-                     * which has higher specificity (0,2,1) than any global
-                     * ::-webkit-scrollbar-thumb:hover rule (0,1,1), so they win
-                     * even if there's a global stylesheet trying to set them.
-                     *
-                     * Firefox support: `scrollbar-width: thin` (replaces the
-                     * default thick bar) + `scrollbar-color` (thumb + track).
-                     */}
                     <div
                         className="min-h-0 flex-1 overflow-y-auto overscroll-none pt-14 [-webkit-overflow-scrolling:auto]
                             [&::-webkit-scrollbar]:w-1.5
